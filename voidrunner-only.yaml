@@ -1,0 +1,115 @@
+# BURST MANIFEST voidrunner-only — DRAFT 2026-11-10 (prep only, no launch).
+# VOIDRUNNER-only push: BUILD + EMULATE + VERIFY for the native rebuild,
+# without waiting on the suite push's prep queue (25 org repos, 50 unpinned
+# refs, interrupted DeepSeek pass-2). Modeled on draft-camp-1.yaml (same
+# box, cap, ceiling, job shapes). Price ceiling $1.25/h is an orchestrator
+# flag (--price-ceiling, default 1.25), not a manifest field.
+#
+# PIN: raaruofficial/voidrunner @ 49865ea87b45cad59416477ad04f99f135079567
+#   (remote HEAD as read 2026-11-10 ~19:15 PST; pushed 2026-11-03T09:20:04Z;
+#   repo is PRIVATE, verified via gh api.)
+#   *** THE PIN IS THE OLD BUILD, NOT THE NATIVE REBUILD ***
+#   The pinned tree is v1.0.3 / versionCode 3, WebView-based (GameScreen.kt
+#   imports android.webkit.WebView; game renders from assets/game/index.html),
+#   12 Kotlin files. The native rebuild (35 Kotlin files, 1.1.0/vc14 proposed,
+#   0 WebView) exists ONLY as an uncommitted working tree at
+#   ~/workspace/voidrunner-rebuild/ (no .git) and has never been pushed.
+#   Firing on this pin would build/test the OLD app, not the rebuild.
+#   Before fire: commit + push the rebuild ([skip ci]), re-pin to the new
+#   HEAD, and apply the identity patch in that same push.
+#
+# BLOCKERS (all owed, none authorized in this prep pass):
+#   1. REBUILD NOT PUSHED (see pin note above) — the fire-blocking item.
+#   2. NO GRADLE WRAPPER anywhere (repo tree or local working tree) — the
+#      BUILD job's ./gradlew fails as written. Add gradle/wrapper
+#      (Gradle 8.9+, matching the repo root's AGP 8.7.3 / Kotlin 2.0.21)
+#      at push time. Bootstrap installs Gradle via wrapper only (SPEC §7).
+#      Project root is the REPO ROOT (build.gradle.kts + settings.gradle.kts
+#      at root) — there is no android-app/ dir in the repo; the local
+#      working tree's android-app/ is a lane-side mirror of the repo root.
+#   3. NO TEST SOURCES anywhere — no testDebugUnitTest leg exists; BUILD is
+#      assembleDebug only. (The local working tree is also missing its root
+#      build.gradle.kts plugin-version declarations; the repo's root file
+#      already carries AGP 8.7.3 / Kotlin 2.0.21 — keep it at push time.)
+#   4. BATTERY SCRIPT NOT IN REPO — ./cold-run-battery.sh (kit/, the estate
+#      battery) must be committed at repo root at push time (suite pattern:
+#      EMULATE jobs reference it). The repo's own tools/verify-cold-run-m8a.sh
+#      is the v1.0.2 WebView-era seal lane (asserts v1.0.2 stamps + a WebView
+#      frontpage; takes APK_PATH to a RELEASE apk from CI; does not start an
+#      emulator itself) and is NOT the battery for the native rebuild.
+#   5. PRIVATE-REPO CLONE HAS NO CREDENTIAL PATH — the orchestrator clones
+#      plain https://github.com/<repo>.git with no token injection (only a
+#      per-job `clone_url` override exists); SPEC §8.1 designs a read-only
+#      per-campaign GitHub credential (fine-grained token or deploy keys,
+#      revoked at teardown) but no kit code provisions or injects it, the
+#      LAUNCH_CHECKLIST only mentions revoking it, and no such credential
+#      exists in estate-keys. Until one is designated + injected, every job
+#      fails at clone on this private repo. Same gap blocks the suite push's
+#      private lanes. No credential was created here.
+#   6. MWA VERSION FLOATING in the rebuild (app/build.gradle.kts:57:
+#      mobile-wallet-adapter-clientlib-ktx:+ — the file itself says "PIN THE
+#      VERSION AT THE SEAL LEGS"). Pin 2.0.8 (the repo HEAD's pinned version)
+#      at push time.
+#   7. IDENTITY PATCH not applied — see identity-patch-variant-A/B.diff in
+#      this directory (staged, not applied; base = local working tree).
+#      The pinned HEAD's identity is worse than the rebuild's: it points at
+#      the DELETED DigitalOcean app
+#      (https://voidrunner-2hm7p.ondigitalocean.app/ + a .webp icon there);
+#      the rebuild's points at https://voidrunner.app (someone else's).
+#      Either way the icon is dead until the patch lands AND a favicon
+#      exists at the new address (see REPORT.md — favicon finding).
+# Cap $8, box m8i.12xlarge, max_hours 6 — as SPEC §11a.
+# Fold-in: job ids are voidrunner-* (no collision with suite ids) and lane
+# is `voidrunner`; to fold into draft-camp-1.yaml, copy these three jobs,
+# re-pin to the rebuild HEAD, and re-estimate the campaign cost (the $8 cap
+# already carries the suite estimate of $3.50–$5.50; these jobs add roughly
+# $1.50–$3.00 of box time in the same push's waves).
+campaign: voidrunner-only
+budget_cap_usd: 8  # owner-set per SPEC §11a single-push adoption
+box: { type: m8i.12xlarge, region: us-west-2, max_hours: 6 }
+jobs:
+  # voidrunner-l1l2 — BUILD: assemble the debug APK. No test leg exists
+  # (no test sources); ./gradlew needs the wrapper added at push time
+  # (blocker 2). On the CURRENT pin this job fails (no wrapper) — that is
+  # the correct signal that the pin is the old tree, not a job defect.
+  - id: voidrunner-l1l2
+    lane: voidrunner
+    kind: BUILD
+    repo: raaruofficial/voidrunner
+    ref: 49865ea87b45cad59416477ad04f99f135079567
+    run: ./gradlew assembleDebug
+    timeout_min: 40
+    produces: ["*.apk"]
+    custody: none
+  # voidrunner-l3 — EMULATE: estate cold-run battery (kit/cold-run-battery.sh,
+  # committed at repo root at push time — blocker 4) against the BUILD leg's
+  # debug APK, with the §5.1 wait (APK_WAIT_S=5400, fail-fast if BUILD fails).
+  # The debug APK's applicationId is com.voidrunner.app.debug; the battery's
+  # auto-detect handles the .debug suffix on the package (not the activity).
+  - id: voidrunner-l3
+    lane: voidrunner
+    kind: EMULATE
+    repo: raaruofficial/voidrunner
+    ref: 49865ea87b45cad59416477ad04f99f135079567
+    run: APK="$BURST_OUT/jobs/voidrunner-l1l2/evidence/*.apk/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=voidrunner-l1l2 ./cold-run-battery.sh
+    timeout_min: 150
+    produces: [cold-run-report, logcat.txt]
+    custody: none
+  # voidrunner-verify — VERIFY: source-truth gate, self-contained (no APK
+  # needed, no ordering dependency on the BUILD leg). Passes only when the
+  # tree is the native rebuild with a controlled identity: no WebView
+  # anywhere in the Kotlin sources, the MWA clientlib present, and the
+  # wallet identity pointing at a domain the estate controls (Pages or
+  # voidrunnergame.app). On the CURRENT pin this job FAILS by design (old
+  # tree has WebView + the deleted DigitalOcean identity) — that failure is
+  # the gate working, not a job defect. The binary-level listing-truth audit
+  # (LIBRARIAN method) happens back home from the BUILD evidence, not here.
+  - id: voidrunner-verify
+    lane: voidrunner
+    kind: VERIFY
+    repo: raaruofficial/voidrunner
+    ref: 49865ea87b45cad59416477ad04f99f135079567
+    run: '! grep -rq "android.webkit" app/src/main/java/ && grep -q "mobile-wallet-adapter" app/build.gradle.kts && grep -Eq "voidrunnergame.app|raaruofficial.github.io/voidrunner" app/src/main/java/com/voidrunner/app/wallet/WalletManager.kt && echo VOIDRUNNER-VERIFY-OK > verify-report.txt'
+    timeout_min: 15
+    produces: [verify-report.txt]
+    custody: none
