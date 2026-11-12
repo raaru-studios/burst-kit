@@ -4,13 +4,23 @@
 # Cloud-init user-data for the burst box. Runs ONCE at first boot as
 # root. It does exactly these things, in this order (launch checklist
 # step 5):
-#   1. Fetch bootstrap.sh, orchestrator.py, cold-run-battery.sh, and the
-#      linted manifest from KIT_SOURCE, machine-to-machine, and verify
-#      each file's sha256 against the hashes recorded at checklist
-#      step 0. A hash mismatch aborts loudly — no launch on unverified
-#      kit bytes (SPEC §8.2).
-#   2. Arm the self-terminate (§9.4): schedule `shutdown -h now` at
-#      derived max_hours MINUS 15 minutes after boot. With
+#   0. Arm a 60-minute DEFAULT self-terminate immediately after the
+#      epoch (§0, F-2): the box can never outlive 60 minutes without a
+#      safety, even if the fetch/hash steps below fail. It is re-armed
+#      with the derived value (max_hours − 15 min) once MAX_HOURS is
+#      validated (§2) — the re-arm cancels the default first, so
+#      exactly one shutdown is ever scheduled.
+#   1. Fetch bootstrap.sh, orchestrator.py, cold-run-battery.sh, and
+#      (campaign only) the linted manifest from KIT_SOURCE,
+#      machine-to-machine, and verify each file's sha256 against the
+#      hashes recorded at checklist step 0. A hash mismatch aborts
+#      loudly — no launch on unverified kit bytes (SPEC §8.2).
+#      With SMOKE=1 the manifest is NOT fetched and the orchestrator
+#      is NOT started — the smoke fetches no manifest and proves
+#      bootstrap + self-terminate + SSH only (F-3).
+#   2. Re-arm the self-terminate (§9.4) with the derived value:
+#      schedule `shutdown -h now` at derived max_hours MINUS 15
+#      minutes after boot. With
 #      --instance-initiated-shutdown-behavior terminate (checklist
 #      step 4) the shutdown destroys the box. If arming fails, the
 #      script dies LOUDLY — a box with no self-terminate never runs
@@ -33,7 +43,9 @@
 # the operator records it in the launch record. Do NOT improvise a
 # transport at launch time.
 #
-# Exit codes: 0 user-data complete, orchestrator started detached.
+# Exit codes: 0 user-data complete (orchestrator started detached,
+#   or SMOKE=1 proof complete with the orchestrator deliberately not
+#   started).
 #   1 any loud failure above (unset variable, fetch failure, hash
 #     mismatch, self-terminate arming failure, bootstrap failure).
 #   The orchestrator's own exit code is in its log, not this script's.
@@ -56,6 +68,7 @@ KIT_SHA256S="${KIT_SHA256S:-}"
 
 # Optional, with safe defaults.
 CAMPAIGN="${CAMPAIGN:-camp-1}"
+SMOKE="${SMOKE:-0}"   # SMOKE=1: bootstrap proof only — no manifest fetch, no orchestrator start (F-3).
 BURST_HOME="${BURST_HOME:-/opt/burst}"
 KIT_DIR="${KIT_DIR:-$BURST_HOME/kit}"
 MANIFEST_FILE="${MANIFEST_FILE:-manifest.yaml}"
@@ -68,6 +81,72 @@ exec > >(tee -a "$LOG") 2>&1
 log()  { printf '[user-data %s] %s\n' "$(date -u +%H:%M:%S)" "$*"; }
 die()  { log "FATAL: $*"; exit 1; }
 
+# ------------------------------------------- arm self-terminate (function)
+# Defined up here, before §0, so the 60-minute default arm can run
+# immediately after the epoch — before the vars check, the fetch, or
+# the hash verify can fail (F-2). The §2 re-arm calls the same
+# function with the derived value.
+# self-terminate-arm-begin
+# arm_self_terminate <minutes> <epoch> — schedule `shutdown -h now`
+# at <minutes> after boot. systemd timer first (survives the whole
+# run as a unit, visible in `systemctl list-timers`); a detached
+# setsid sleep as fallback. Either way the arming is verified before
+# this function returns, and its record lands in
+# $BURST_HOME/self-terminate.armed for checklist step 7.
+# Re-arming cancels any earlier arm first (the §0 60-minute default,
+# if this is the §2 re-arm) so exactly one shutdown is ever
+# scheduled — stopping a nonexistent unit is harmless (|| true).
+# NOTE: keep this function between the self-terminate-arm-begin/end
+# markers — the unit test extracts exactly this block from this file
+# and tests the real code, not a copy.
+arm_self_terminate() {
+  local minutes="$1" epoch="$2"
+  local armed_file="$BURST_HOME/self-terminate.armed"
+  local mechanism=""
+  systemctl stop burst-self-terminate.timer 2>/dev/null || true
+  systemctl stop burst-self-terminate.service 2>/dev/null || true
+  systemctl reset-failed burst-self-terminate.service 2>/dev/null || true
+  pkill -f "burst-self-terminate" 2>/dev/null || true
+  if command -v systemd-run >/dev/null 2>&1 \
+      && systemd-run --on-active="${minutes}min" \
+           --unit=burst-self-terminate \
+           --description="Burst self-terminate (SPEC 9.4)" \
+           /sbin/shutdown -h now 2>/dev/null; then
+    # Transient timer creation can lag the list call; retry briefly
+    # before concluding the systemd path failed — arming BOTH
+    # mechanisms at once would leave a stray timer behind.
+    for _ in 1 2 3 4 5; do
+      if systemctl list-timers --all 2>/dev/null \
+           | grep -q "burst-self-terminate"; then
+        mechanism="systemd-timer"
+        break
+      fi
+      sleep 1
+    done
+  fi
+  if [ -z "$mechanism" ]; then
+    # systemd path unavailable or failed (e.g. not the init system):
+    # a detached setsid sleep is the fallback — still an armed
+    # shutdown, still verified below. Stop any stray timer first so
+    # exactly one mechanism is armed. Only a failure to arm by EITHER
+    # mechanism is fatal.
+    systemctl stop burst-self-terminate.timer 2>/dev/null || true
+    setsid nohup bash -c "sleep $((minutes * 60)); exec /sbin/shutdown -h now" burst-self-terminate \
+      >/dev/null 2>&1 < /dev/null &
+    sleep 2
+    if pgrep -f "burst-self-terminate" >/dev/null; then
+      mechanism="setsid-sleep"
+    else
+      die "self-terminate arming FAILED by both mechanisms — no launch without the §9.4 backstop (V-R02)"
+    fi
+  fi
+  printf 'armed_at_epoch=%s\nscheduled_shutdown_epoch=%s\nminutes_after_boot=%s\nmechanism=%s\n' \
+    "$BOX_LAUNCH_EPOCH" "$epoch" "$minutes" "$mechanism" \
+    > "$armed_file"
+  log "self-terminate ARMED ($mechanism): shutdown at ${minutes}m after boot (epoch $epoch) — record in $armed_file"
+}
+# self-terminate-arm-end
+
 # ------------------------------------------------------------------ 0. epoch
 # Recorded FIRST, before any fetch or install bills time: this is the
 # cost clock's start (V-R06). Everything the box does from here on is
@@ -75,11 +154,17 @@ die()  { log "FATAL: $*"; exit 1; }
 BOX_LAUNCH_EPOCH="$(date +%s)"
 log "box launch epoch: $BOX_LAUNCH_EPOCH ($(date -u -d "@$BOX_LAUNCH_EPOCH" +%Y-%m-%dT%H:%M:%SZ))"
 
+# F-2: arm the 60-minute DEFAULT self-terminate NOW, before the
+# required-vars check, the fetch, or the hash verify can fail — a box
+# must never run without a scheduled shutdown. Re-armed with the
+# derived value at §2 once MAX_HOURS is validated.
+arm_self_terminate 60 $((BOX_LAUNCH_EPOCH + 3600))
+
 # ------------------------------------------------------- 0b. required vars
 [ -n "$KIT_SOURCE" ]       || die "KIT_SOURCE is unset — the kit source is undesignated (IGNITION N-3): name the read-only location the box fetches bootstrap.sh, orchestrator.py, cold-run-battery.sh, and the manifest from, and record it in the launch record. No launch without it."
 [ -n "$HOURLY_PRICE_USD" ] || die "HOURLY_PRICE_USD is unset — pass the live \$/hr from the pre-flight print (checklist step 2). No launch without it."
 [ -n "$MAX_HOURS" ]        || die "MAX_HOURS is unset — pass the derived max_hours from the pre-flight print (checklist step 2: min(6, (cap - \$0.50) / live price)). No launch without it."
-[ -n "$KIT_SHA256S" ]      || die "KIT_SHA256S is unset — pass the sha256sum-format lines for the four kit files, recorded at checklist step 0. No launch on unverified kit bytes (SPEC §8.2)."
+[ -n "$KIT_SHA256S" ]      || die "KIT_SHA256S is unset — pass the sha256sum-format lines for the kit files, recorded at checklist step 0 (four lines for a campaign, three for SMOKE=1 — the smoke fetches no manifest). No launch on unverified kit bytes (SPEC §8.2)."
 case "$MAX_HOURS" in
   ''|*[!0-9.]*)
     die "MAX_HOURS='$MAX_HOURS' is not a number — pass the derived max_hours (checklist step 2)." ;;
@@ -125,72 +210,30 @@ fetch_one() {
 fetch_one bootstrap.sh
 fetch_one orchestrator.py
 fetch_one cold-run-battery.sh
-fetch_one "$MANIFEST_FILE"
+if [ "$SMOKE" = "1" ]; then
+  log "SMOKE=1 — no manifest fetch (the smoke fetches no manifest, F-3)"
+else
+  fetch_one "$MANIFEST_FILE"
+fi
 chmod +x "$KIT_DIR/bootstrap.sh" "$KIT_DIR/orchestrator.py" \
   "$KIT_DIR/cold-run-battery.sh"
 
 # ------------------------------------------------------- 1b. hash verify
 # KIT_SHA256S holds sha256sum-format lines ("<sha256>  <filename>")
-# for exactly the four files above, as recorded at checklist step 0.
+# for exactly the files fetched above — four for a campaign (three
+# kit files + manifest), three for SMOKE=1 (kit files only, no
+# manifest) — as recorded at checklist step 0.
 printf '%s\n' "$KIT_SHA256S" > "$KIT_DIR/kit.sha256"
 (cd "$KIT_DIR" && sha256sum -c kit.sha256) \
   || die "HASH MISMATCH: a fetched kit file does not match the step-0 hashes — aborting, no launch on unverified kit bytes (SPEC §8.2)"
 log "kit hashes verified (sha256sum -c clean)"
 
-# ------------------------------------------------- 2. arm self-terminate
-# self-terminate-arm-begin
-# arm_self_terminate <minutes> <epoch> — schedule `shutdown -h now`
-# at <minutes> after boot. systemd timer first (survives the whole
-# run as a unit, visible in `systemctl list-timers`); a detached
-# setsid sleep as fallback. Either way the arming is verified before
-# this function returns, and its record lands in
-# $BURST_HOME/self-terminate.armed for checklist step 7.
-# NOTE: keep this function between the self-terminate-arm-begin/end
-# markers — the unit test extracts exactly this block from this file
-# and tests the real code, not a copy.
-arm_self_terminate() {
-  local minutes="$1" epoch="$2"
-  local armed_file="$BURST_HOME/self-terminate.armed"
-  local mechanism=""
-  if command -v systemd-run >/dev/null 2>&1 \
-      && systemd-run --on-active="${minutes}min" \
-           --unit=burst-self-terminate \
-           --description="Burst self-terminate (SPEC 9.4)" \
-           /sbin/shutdown -h now 2>/dev/null; then
-    # Transient timer creation can lag the list call; retry briefly
-    # before concluding the systemd path failed — arming BOTH
-    # mechanisms at once would leave a stray timer behind.
-    for _ in 1 2 3 4 5; do
-      if systemctl list-timers --all 2>/dev/null \
-           | grep -q "burst-self-terminate"; then
-        mechanism="systemd-timer"
-        break
-      fi
-      sleep 1
-    done
-  fi
-  if [ -z "$mechanism" ]; then
-    # systemd path unavailable or failed (e.g. not the init system):
-    # a detached setsid sleep is the fallback — still an armed
-    # shutdown, still verified below. Stop any stray timer first so
-    # exactly one mechanism is armed. Only a failure to arm by EITHER
-    # mechanism is fatal.
-    systemctl stop burst-self-terminate.timer 2>/dev/null || true
-    setsid nohup bash -c "sleep $((minutes * 60)); exec /sbin/shutdown -h now" burst-self-terminate \
-      >/dev/null 2>&1 < /dev/null &
-    sleep 2
-    if pgrep -f "burst-self-terminate" >/dev/null; then
-      mechanism="setsid-sleep"
-    else
-      die "self-terminate arming FAILED by both mechanisms — no launch without the §9.4 backstop (V-R02)"
-    fi
-  fi
-  printf 'armed_at_epoch=%s\nscheduled_shutdown_epoch=%s\nminutes_after_boot=%s\nmechanism=%s\n' \
-    "$BOX_LAUNCH_EPOCH" "$epoch" "$minutes" "$mechanism" \
-    > "$armed_file"
-  log "self-terminate ARMED ($mechanism): shutdown at ${minutes}m after boot (epoch $epoch) — record in $armed_file"
-}
-# self-terminate-arm-end
+# --------------------------------------------- 2. re-arm self-terminate
+# The 60-minute default was armed at §0 (F-2). Re-arm with the derived
+# value now that MAX_HOURS is validated — arm_self_terminate cancels
+# the default first, so exactly one shutdown is scheduled.
+# (The function lives above §0, between its arm markers — the unit
+# test extracts exactly that block.)
 arm_self_terminate "$SELF_TERMINATE_MIN" "$SELF_TERMINATE_EPOCH"
 
 # ------------------------------------------------------- 3. bootstrap
@@ -201,6 +244,14 @@ export BURST_HOME
 log "bootstrap complete"
 
 # ---------------------------------------------------- 4. start orchestrator
+# F-3: with SMOKE=1 the smoke stops after bootstrap — no manifest was
+# fetched and the orchestrator is NOT started. The smoke proves
+# bootstrap + self-terminate + SSH only.
+if [ "$SMOKE" = "1" ]; then
+  log "SMOKE=1 — bootstrap proof only: orchestrator NOT started, no manifest was fetched"
+  log "user-data complete — smoke box: bootstrap proven, self-terminate armed at ${SELF_TERMINATE_MIN}m; the operator terminates it (SMOKE_TEST.md step 6)"
+  exit 0
+fi
 # Detached: user-data must return; the orchestrator owns the campaign
 # from here. Its log is the run's first artifact; the state-pull
 # (checklist step 9) reads state.json out of the bundle it writes.
