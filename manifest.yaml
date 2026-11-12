@@ -1,12 +1,15 @@
 # BURST MANIFEST camp-1 — HAND-COMPLETED 2026-11-06 from verified facts.
-# Fire-ready EXCEPT the blockers listed here (see READINESS.md):
-#   1. REPOS: 25 of 27 lane repos DO NOT EXIST on GitHub
-#      (raaru-studios org holds only clink-app, gaspumpa-app,
-#      ore-booth-app, ore-rescue-app). Only rescue + booth are verified.
-#   2. PINS: 4 jobs pinned (rescue, booth — pushed HEADs, but STALE:
-#      both working trees carry uncommitted Nov 5 defect-fix edits).
-#      The other 50 suite jobs carry TODO-PIN-AT-REVIEW: lint REFUSES
-#      until each lane's build is committed + pushed ([skip ci]) and pinned.
+# Updated 2026-11-11: ALL 25 lane repos exist, are pushed ([skip ci])
+# and pinned — lint OK (55 live jobs, cap $8). Fire-ready EXCEPT the
+# blockers listed here (see READINESS.md):
+#   1. REPOS: DONE 2026-11-11 — all 25 raaru-studios/ore-*-app repos
+#      exist, each lane's build pushed, SHAs pinned below (verified by
+#      check-pin-currency.py: 27 CURRENT, 1 false-STALE paper-moon —
+#      see note at paper-moon-chart-scrub).
+#   2. PINS: DONE 2026-11-11 — all 50 suite refs pinned to real SHAs;
+#      rescue + booth re-pinned to current HEADs (Nov 5 fixes committed
+#      + pushed). 0 TODO-PIN-AT-REVIEW refs remain (one header comment
+#      below mentions the old state only).
 #   3. BATTERY: ./cold-run-battery.sh exists in kit/ (authored + verified
 #      2026-11-06) and is committed into each repo at push time.
 #      APK WIRING (§5.1, 2026-11-07): each BUILD leg harvests its debug
@@ -27,9 +30,11 @@
 #      Paper Moon chart-scrub VERIFY job added 2026-11-07 (57th job,
 #      pinned) — see paper-moon-chart-scrub below. Live jobs: 55
 #      (57 - gaspumpa-l3 - haunt-l3, both excluded 2026-11-11).
-#   4. RIDERS STUBBED: crown-verify (no Crown repo exists anywhere);
-#      kingdom-dispatch-1/2 (repo exists, HEAD pinned-clean, but the repo
-#      has NO gradle wrapper, so no verifiable build entrypoint).
+#   4. RIDERS STUBBED: crown-verify (no Crown repo exists anywhere —
+#      owner decision: build Crown or run the gate on Booth L3 only);
+#      kingdom-dispatch-1/2 (repo exists; gradle wrapper ADDED
+#      2026-11-11, so the build entrypoint is cured — the two dispatch
+#      jobs stay commented stubs until the fire gate enables them).
 # Cap $8, box m8i.12xlarge, max_hours 6 — UNCHANGED (SPEC §11a).
 # Original generator draft backed up at hidden/draft-camp-1.yaml.orig-2026-11-06.
 campaign: camp-1
@@ -42,7 +47,7 @@ jobs:
     lane: ore-pit
     kind: BUILD
     repo: raaru-studios/ore-pit-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 89c6d9096db38b30f3d6d704ead1ea1b6d8738af
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -51,7 +56,7 @@ jobs:
     lane: ore-pit
     kind: EMULATE
     repo: raaru-studios/ore-pit-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 89c6d9096db38b30f3d6d704ead1ea1b6d8738af
     run: APK="$BURST_OUT/jobs/pit-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=pit-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -61,7 +66,7 @@ jobs:
     lane: ore-watch
     kind: BUILD
     repo: raaru-studios/ore-watch-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: b38296ac66dd4a3cb3a4d24a1a47ec780e3d828f
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -70,7 +75,7 @@ jobs:
     lane: ore-watch
     kind: EMULATE
     repo: raaru-studios/ore-watch-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: b38296ac66dd4a3cb3a4d24a1a47ec780e3d828f
     run: APK="$BURST_OUT/jobs/watch-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=watch-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -80,7 +85,7 @@ jobs:
     lane: ore-harvest
     kind: BUILD
     repo: raaru-studios/ore-harvest-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 5931befddcb571dabbf16318d2ab46f20a9fe009
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -89,7 +94,7 @@ jobs:
     lane: ore-harvest
     kind: EMULATE
     repo: raaru-studios/ore-harvest-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 5931befddcb571dabbf16318d2ab46f20a9fe009
     run: APK="$BURST_OUT/jobs/harvest-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=harvest-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -99,7 +104,7 @@ jobs:
     lane: ore-fleet
     kind: BUILD
     repo: raaru-studios/ore-fleet-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 345178bf6765fc0751a038c58b1c58b56a726e58
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -108,7 +113,7 @@ jobs:
     lane: ore-fleet
     kind: EMULATE
     repo: raaru-studios/ore-fleet-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 345178bf6765fc0751a038c58b1c58b56a726e58
     run: APK="$BURST_OUT/jobs/fleet-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=fleet-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -118,7 +123,7 @@ jobs:
     lane: ore-edge
     kind: BUILD
     repo: raaru-studios/ore-edge-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 295b67c2945ff35b384c897d1be451a2bd7c3bd6
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -127,7 +132,7 @@ jobs:
     lane: ore-edge
     kind: EMULATE
     repo: raaru-studios/ore-edge-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 295b67c2945ff35b384c897d1be451a2bd7c3bd6
     run: APK="$BURST_OUT/jobs/edge-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=edge-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -137,7 +142,7 @@ jobs:
     lane: ore-pay
     kind: BUILD
     repo: raaru-studios/ore-pay-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 557fcc4be1d67ea812ae85b2ddf8e5fa7fccd21d
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -146,7 +151,7 @@ jobs:
     lane: ore-pay
     kind: EMULATE
     repo: raaru-studios/ore-pay-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 557fcc4be1d67ea812ae85b2ddf8e5fa7fccd21d
     run: APK="$BURST_OUT/jobs/pay-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=pay-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -156,7 +161,7 @@ jobs:
     lane: ore-vault
     kind: BUILD
     repo: raaru-studios/ore-vault-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 09ac079f6d7632a46c9c5366cfea740c8545b27b
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -165,7 +170,7 @@ jobs:
     lane: ore-vault
     kind: EMULATE
     repo: raaru-studios/ore-vault-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 09ac079f6d7632a46c9c5366cfea740c8545b27b
     run: APK="$BURST_OUT/jobs/vault-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=vault-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -175,7 +180,7 @@ jobs:
     lane: ore-circle
     kind: BUILD
     repo: raaru-studios/ore-circle-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 3b0cf8dd09944fab18d8ea7e533163333524d9ce
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -184,7 +189,7 @@ jobs:
     lane: ore-circle
     kind: EMULATE
     repo: raaru-studios/ore-circle-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 3b0cf8dd09944fab18d8ea7e533163333524d9ce
     run: APK="$BURST_OUT/jobs/circle-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=circle-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -195,7 +200,7 @@ jobs:
     lane: ore-pocket
     kind: BUILD
     repo: raaru-studios/ore-pocket-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 8337982036e41dfe3a1f7739a420839e4d9dc9dc
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -204,7 +209,7 @@ jobs:
     lane: ore-pocket
     kind: EMULATE
     repo: raaru-studios/ore-pocket-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 8337982036e41dfe3a1f7739a420839e4d9dc9dc
     run: APK="$BURST_OUT/jobs/pocket-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=pocket-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -214,7 +219,7 @@ jobs:
     lane: ore-ledger
     kind: BUILD
     repo: raaru-studios/ore-ledger-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 4feeba69705412d542593aee3509af840218aa7c
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -223,7 +228,7 @@ jobs:
     lane: ore-ledger
     kind: EMULATE
     repo: raaru-studios/ore-ledger-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 4feeba69705412d542593aee3509af840218aa7c
     run: APK="$BURST_OUT/jobs/ledger-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=ledger-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -233,7 +238,7 @@ jobs:
     lane: ore-data
     kind: BUILD
     repo: raaru-studios/ore-data-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: ab296fddab2f5567a6fc5eb83e26575c38ac0063
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -242,7 +247,7 @@ jobs:
     lane: ore-data
     kind: EMULATE
     repo: raaru-studios/ore-data-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: ab296fddab2f5567a6fc5eb83e26575c38ac0063
     run: APK="$BURST_OUT/jobs/data-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=data-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -252,7 +257,7 @@ jobs:
     lane: ore-anomaly
     kind: BUILD
     repo: raaru-studios/ore-anomaly-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 7858100356ab977441518be0765b3a65b3911ae3
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -261,7 +266,7 @@ jobs:
     lane: ore-anomaly
     kind: EMULATE
     repo: raaru-studios/ore-anomaly-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 7858100356ab977441518be0765b3a65b3911ae3
     run: APK="$BURST_OUT/jobs/anomaly-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=anomaly-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -272,7 +277,7 @@ jobs:
     lane: ore-reclaim
     kind: BUILD
     repo: raaru-studios/ore-reclaim-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 7838a20c8556a4e80366bf71f437c7f739962ce4
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -281,7 +286,7 @@ jobs:
     lane: ore-reclaim
     kind: EMULATE
     repo: raaru-studios/ore-reclaim-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 7838a20c8556a4e80366bf71f437c7f739962ce4
     run: APK="$BURST_OUT/jobs/reclaim-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=reclaim-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -331,7 +336,7 @@ jobs:
     lane: ore-pin
     kind: BUILD
     repo: raaru-studios/ore-pin-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 3eb1759183487ff6dcbea29c85c43a183f81060d
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -340,7 +345,7 @@ jobs:
     lane: ore-pin
     kind: EMULATE
     repo: raaru-studios/ore-pin-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 3eb1759183487ff6dcbea29c85c43a183f81060d
     run: APK="$BURST_OUT/jobs/pin-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=pin-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -351,7 +356,7 @@ jobs:
     lane: ore-print
     kind: BUILD
     repo: raaru-studios/ore-print-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 0277b6cb03d04f7bbde10822a1577538ef6efb58
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -360,7 +365,7 @@ jobs:
     lane: ore-print
     kind: EMULATE
     repo: raaru-studios/ore-print-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 0277b6cb03d04f7bbde10822a1577538ef6efb58
     run: APK="$BURST_OUT/jobs/print-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=print-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -370,7 +375,7 @@ jobs:
     lane: ore-seat
     kind: BUILD
     repo: raaru-studios/ore-seat-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: de1e16d6784fec202e03792f7329ef722f55b9c0
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -379,7 +384,7 @@ jobs:
     lane: ore-seat
     kind: EMULATE
     repo: raaru-studios/ore-seat-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: de1e16d6784fec202e03792f7329ef722f55b9c0
     run: APK="$BURST_OUT/jobs/seat-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=seat-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -389,7 +394,7 @@ jobs:
     lane: ore-bounty
     kind: BUILD
     repo: raaru-studios/ore-bounty-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 89de058dbcd1249d1b797af9364d5595cfd4819f
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -398,7 +403,7 @@ jobs:
     lane: ore-bounty
     kind: EMULATE
     repo: raaru-studios/ore-bounty-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 89de058dbcd1249d1b797af9364d5595cfd4819f
     run: APK="$BURST_OUT/jobs/bounty-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=bounty-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -408,7 +413,7 @@ jobs:
     lane: ore-machine
     kind: BUILD
     repo: raaru-studios/ore-machine-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 0d40614c028624525e442d0eb39ef3b92fcf0c64
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -417,7 +422,7 @@ jobs:
     lane: ore-machine
     kind: EMULATE
     repo: raaru-studios/ore-machine-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 0d40614c028624525e442d0eb39ef3b92fcf0c64
     run: APK="$BURST_OUT/jobs/machine-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=machine-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -427,7 +432,7 @@ jobs:
     lane: ore-almanac
     kind: BUILD
     repo: raaru-studios/ore-almanac-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: c001b9daea9c23f6656b27da9e003c67b011bead
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -436,7 +441,7 @@ jobs:
     lane: ore-almanac
     kind: EMULATE
     repo: raaru-studios/ore-almanac-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: c001b9daea9c23f6656b27da9e003c67b011bead
     run: APK="$BURST_OUT/jobs/almanac-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=almanac-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -446,7 +451,7 @@ jobs:
     lane: ore-season
     kind: BUILD
     repo: raaru-studios/ore-season-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 207c39c3b9d75940fff35c8377ec21892d11ef58
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -455,7 +460,7 @@ jobs:
     lane: ore-season
     kind: EMULATE
     repo: raaru-studios/ore-season-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 207c39c3b9d75940fff35c8377ec21892d11ef58
     run: APK="$BURST_OUT/jobs/season-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=season-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -465,7 +470,7 @@ jobs:
     lane: ore-scout
     kind: BUILD
     repo: raaru-studios/ore-scout-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: acdd5829027aca9ac2af0a8ea9f2c29e8f91cd6a
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -474,7 +479,7 @@ jobs:
     lane: ore-scout
     kind: EMULATE
     repo: raaru-studios/ore-scout-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: acdd5829027aca9ac2af0a8ea9f2c29e8f91cd6a
     run: APK="$BURST_OUT/jobs/scout-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=scout-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -484,7 +489,7 @@ jobs:
     lane: ore-escrow
     kind: BUILD
     repo: raaru-studios/ore-escrow-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: a10d42cd05c544638360902f1511531311462e0c
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -493,7 +498,7 @@ jobs:
     lane: ore-escrow
     kind: EMULATE
     repo: raaru-studios/ore-escrow-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: a10d42cd05c544638360902f1511531311462e0c
     run: APK="$BURST_OUT/jobs/escrow-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=escrow-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -503,7 +508,7 @@ jobs:
     lane: ore-guild
     kind: BUILD
     repo: raaru-studios/ore-guild-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: f3ddf706c4539cbbaae8dbca69b74ccea1e3787e
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -512,7 +517,7 @@ jobs:
     lane: ore-guild
     kind: EMULATE
     repo: raaru-studios/ore-guild-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: f3ddf706c4539cbbaae8dbca69b74ccea1e3787e
     run: APK="$BURST_OUT/jobs/guild-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=guild-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -522,7 +527,7 @@ jobs:
     lane: ore-legacy
     kind: BUILD
     repo: raaru-studios/ore-legacy-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 511a9ec33730643e9773e0bd9c842e13b6c64b2b
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -531,7 +536,7 @@ jobs:
     lane: ore-legacy
     kind: EMULATE
     repo: raaru-studios/ore-legacy-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 511a9ec33730643e9773e0bd9c842e13b6c64b2b
     run: APK="$BURST_OUT/jobs/legacy-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=legacy-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -541,7 +546,7 @@ jobs:
     lane: ore-radio
     kind: BUILD
     repo: raaru-studios/ore-radio-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 37877b252e08de2dccad40f165e4b1ddfd5d048c
     run: cd android-app && ./gradlew testDebugUnitTest assembleDebug
     timeout_min: 40
     produces: [test-reports, "*.apk"]
@@ -550,7 +555,7 @@ jobs:
     lane: ore-radio
     kind: EMULATE
     repo: raaru-studios/ore-radio-app
-    ref: TODO-PIN-AT-REVIEW
+    ref: 37877b252e08de2dccad40f165e4b1ddfd5d048c
     run: APK="$BURST_OUT/jobs/radio-l1l2/evidence/*.apk/android-app/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=radio-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
@@ -628,7 +633,7 @@ jobs:
     lane: paper-moon
     kind: VERIFY
     repo: raaruofficial/paper-moon
-    ref: d7c9a4b0d66a32df1f640bfccb045f7d9cf22534
+    ref: c45c016a46e254bdf8fcb3342271dd609699143b
     run: python3 verification/chart-scrub.py
     timeout_min: 30
     produces: [chart-scrub-report.json]

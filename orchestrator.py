@@ -13,7 +13,7 @@ Usage:
   orchestrator.py MANIFEST.yaml [--out DIR] [--work DIR]
                   [--lint-only] [--resume] [--retry-failed]
                   [--hourly-price P] [--price-ceiling C]
-                  [--box-launch-epoch E]
+                  [--box-launch-epoch E] [--keys-dir DIR]
                   [--build-par N] [--emulate-par N] [--verify-par N]
 
 Exit codes: 0 all jobs DONE · 2 lint / pre-flight refusal (incl.
@@ -31,6 +31,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import signal
 import subprocess
@@ -137,9 +138,48 @@ SECRET_KEY_RE = re.compile(
 )
 SECRET_RUN_RE = re.compile(
     r"(\.jks\b|keystore|storePassword|keyPassword|mnemonic|seed phrase|"
-    r"BEGIN [A-Z ]*PRIVATE KEY|\.env\b|id_rsa|aws_secret_access_key)",
+    r"BEGIN [A-Z ]*PRIVATE KEY|\.env\b|id_rsa|aws_secret_access_key|"
+    r"ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|"
+    r"sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,})",
     re.IGNORECASE,
 )
+# 2026-11-11 security audit: the run-content pattern previously caught
+# only secret-shaped NAMES and a small set of file/key patterns. A raw
+# credential VALUE pasted into a run command (a GitHub PAT, an OpenAI /
+# Stripe secret key, an AWS access key, a Slack token) passed lint and
+# would have landed in the job log and the evidence bundle. The
+# credential-format alternations above close that hole. They are
+# deliberately narrow (20+ chars after the prefix) so ordinary words
+# do not trip them.
+
+
+def scrub_url(url):
+    """Redact credentials from a clone URL for logging (SECURITY 2026-11-11):
+    a per-campaign GitHub token embedded as URL userinfo
+    (https://<token>@github.com/...) must never land in a job log —
+    job logs are pulled off the box into the results bundle and kept.
+    Strips any userinfo, keeping scheme + host + path."""
+    return re.sub(r"^(https?://)[^/@]+@", r"\1***@", url)
+
+
+def scrub_log_file(path, secret):
+    """Remove a secret string from a log file in place (SECURITY 2026-11-11):
+    git prints the remote URL in its own error output, so a failed clone
+    can leak an embedded token into the log even when the orchestrator's
+    own emit() redacts it. Best-effort: read, replace, rewrite.
+    Two passes: (1) the exact secret string; (2) ANY https://<userinfo>@
+    pattern — git re-prints the URL in shortened forms (host only, no
+    path), so exact-string matching alone misses it."""
+    if not secret:
+        return
+    try:
+        text = Path(path).read_text(errors="replace")
+    except OSError:
+        return
+    new = text.replace(secret, "***")
+    new = re.sub(r"(https?://)[^/@\s]+@", r"\1***@", new)
+    if new != text:
+        Path(path).write_text(new)
 REQUIRED_JOB_FIELDS = ("id", "lane", "kind", "repo", "ref", "run",
                        "timeout_min", "produces", "custody")
 
@@ -215,6 +255,25 @@ def lint_manifest(m):
         if SECRET_RUN_RE.search(run):
             errs.append(f"job {jid}: run command references secret "
                         f"material — refused (SPEC §8)")
+        # …and by content of ANY string value in the job mapping
+        # (2026-11-11 audit: a token pasted into a note, env, or other
+        # field previously passed lint because only the run string was
+        # scanned).
+        for key, val in j.items():
+            if isinstance(val, str) and key != "run" \
+                    and SECRET_RUN_RE.search(val):
+                errs.append(f"job {jid}: field {key!r} contains secret "
+                            f"material — refused (SPEC §8)")
+        # A clone_url carrying embedded credentials
+        # (https://user:pass@github.com/…) would leak the credential
+        # into git's error output and the job log on a failed clone.
+        # Private repos use SSH deploy keys (SPEC §8.1), never a token
+        # in the URL. (2026-11-11 audit.)
+        curl = str(j.get("clone_url", ""))
+        if curl and re.search(r"://[^/]*@", curl):
+            errs.append(f"job {jid}: clone_url carries embedded "
+                        f"credentials — refused (SPEC §8.1: SSH deploy "
+                        f"keys, never a token in the URL)")
     return errs
 
 
@@ -837,12 +896,47 @@ def _run_attempt(camp: Campaign, job, attempt, t0):
         # Clone machine-to-machine and verify the pin (SPEC §8.1–8.2).
         if not (repo_dir / ".git").exists():
             job_dir.mkdir(parents=True, exist_ok=True)
-            clone_url = job.get("clone_url") or f"https://github.com/{job['repo']}.git"
-            emit(f"clone {job['repo']} @ {job['ref']}")
+            clone_url = job.get("clone_url")
+            clone_env = env
+            keys_dir = getattr(camp.args, "keys_dir", None)
+            if keys_dir:
+                # SSH deploy-key path (SPEC §8.1): one read-only key
+                # per repo, named <owner>-<repo> under keys_dir. An
+                # explicit clone_url is honored as-is, but the key
+                # must still exist — keys_dir declares the campaign's
+                # auth mode, and a missing key refuses loudly rather
+                # than falling back to https, which would mask a
+                # credential failure and burn the run on 401s.
+                key = Path(keys_dir) / job["repo"].replace("/", "-")
+                if not key.is_file():
+                    msg = (f"DEPLOY KEY MISSING: no key for "
+                           f"{job['repo']} at {key} — refusing to "
+                           f"fall back to https (a silent fallback "
+                           f"would mask a credential failure)")
+                    emit(msg)
+                    return ("FAILED", "INFRA", False, msg, None)
+                clone_env = dict(env)
+                clone_env["GIT_SSH_COMMAND"] = (
+                    "ssh -i " + shlex.quote(str(key)) +
+                    " -o IdentitiesOnly=yes "
+                    "-o StrictHostKeyChecking=accept-new")
+                if not clone_url:
+                    clone_url = f"git@github.com:{job['repo']}.git"
+            if not clone_url:
+                clone_url = f"https://github.com/{job['repo']}.git"
+            # SECURITY: log the redacted URL only — an embedded
+            # per-campaign token must never reach the job log.
+            emit(f"clone {job['repo']} @ {job['ref']} ({scrub_url(clone_url)})")
             rc = subprocess.run(
                 ["git", "clone", "--quiet", clone_url, str(repo_dir)],
-                stdout=log, stderr=subprocess.STDOUT, env=env).returncode
+                stdout=log, stderr=subprocess.STDOUT,
+                env=clone_env).returncode
             if rc != 0:
+                # SECURITY: git prints the remote URL in its own error
+                # output — scrub any embedded token from the log before
+                # the failure is recorded (the log is pulled off-box).
+                log.flush()
+                scrub_log_file(log_path, clone_url)
                 return fail("clone", rc)
             rc = subprocess.run(
                 ["git", "-C", str(repo_dir), "checkout", "--quiet",
@@ -997,6 +1091,15 @@ def main(argv=None):
                     help="SPEC §9.1 pre-flight price ceiling ($/hr): "
                     "refuse to start when --hourly-price exceeds it; "
                     "raise explicitly (and record why) to override")
+    ap.add_argument("--keys-dir", default=os.environ.get(
+        "BURST_DEPLOY_KEYS_DIR"),
+        help="dir of per-repo read-only SSH deploy keys, one file per "
+        "repo named <owner>-<repo> (SPEC §8.1, "
+        "kit/GITHUB_CREDENTIAL.md). When set, every job clones via "
+        "git@github.com with its repo's key (an explicit clone_url "
+        "is honored as-is) and a missing key refuses loudly rather "
+        "than falling back to https. Unset: plain https clone as "
+        "before. Also honored via env BURST_DEPLOY_KEYS_DIR.")
     # Pool defaults are the low end of the SPEC §5 ranges: 10 daemons +
     # 8 AVDs peak ~144 GB on the 192 GB box, leaving headroom for daemon
     # spikes; 12+10 could peak ~176 GB and risk OOM kills (SPEC §9).
@@ -1053,13 +1156,29 @@ def main(argv=None):
               file=sys.stderr)
         return 2
 
+    # Deploy-keys dir must exist before any job runs: a typo'd path
+    # would otherwise refuse every job one by one as DEPLOY KEY
+    # MISSING. Lint-only already returned above, so linting a
+    # manifest needs no keys.
+    if args.keys_dir and not Path(args.keys_dir).is_dir():
+        print(f"KEYS DIR REFUSAL: --keys-dir {args.keys_dir} is not a "
+              f"directory — the per-repo deploy keys are not where "
+              f"the run expects them (SPEC §8.1) — refusing to run",
+              file=sys.stderr)
+        return 2
+
     campaign = str(manifest["campaign"])
     out_dir = Path(args.out or f"results/{campaign}")
     work_dir = Path(args.work or f"work/{campaign}")
     out_dir.mkdir(parents=True, exist_ok=True)
     work_dir.mkdir(parents=True, exist_ok=True)
-    # Manifest as run (§10) — byte-identical copy.
-    shutil.copy2(args.manifest, out_dir / "manifest.yaml")
+    # Manifest as run (§10) — copy with credentials redacted (SECURITY
+    # 2026-11-11): a clone_url carrying an embedded per-campaign token
+    # must not be persisted verbatim into the results bundle. The copy
+    # is byte-identical except any https://<userinfo>@ is scrubbed.
+    manifest_text = Path(args.manifest).read_text()
+    scrubbed = re.sub(r"(https?://)[^/@\s]+@", r"\1***@", manifest_text)
+    (out_dir / "manifest.yaml").write_text(scrubbed)
 
     # EMULATE jobs need the KVM gate to have passed on this box (§7).
     kinds_present = {j["kind"] for j in manifest["jobs"]}
