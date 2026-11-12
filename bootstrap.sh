@@ -43,6 +43,7 @@ REQUIRE_KVM="${REQUIRE_KVM:-1}"
 ANDROID_HOME="${ANDROID_HOME:-$BURST_HOME/android-sdk}"
 CMDLINE_TOOLS_ZIP="commandlinetools-linux-11076708_latest.zip"
 CMDLINE_TOOLS_URL="https://dl.google.com/android/repository/$CMDLINE_TOOLS_ZIP"
+CMDLINE_TOOLS_SHA256="2d2d50857e4eb553af5a6dc3ad507a17adf43d115264b1afc116f95c92e5e258"
 # §3 (2026-11-11): pinned sha256 of the command-line-tools zip as
 # SERVED by dl.google.com, verified 3x against fresh downloads
 # (153,607,504 bytes, valid zip, 104 entries). Google's
