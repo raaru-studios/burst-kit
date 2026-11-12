@@ -324,6 +324,12 @@ RETRY_REMAINING_TIMEOUT_FACTOR = 1.0
 # floor the run refuses (exit 2) instead of burning the window.
 DISK_MIN_FREE_GB = 20
 
+# Per-job AVD boot budget (competitive audit 2026-11-11): a cold AVD
+# boot takes ~60-120s, a snapshot boot ~10-20s. 600s is a generous
+# ceiling; the boot runs inside the job's attempt, so a hung boot is
+# bounded and the job fails INFRA (retryable) rather than hanging.
+AVD_BOOT_TIMEOUT_S = 600
+
 
 def disk_free_gb(path):
     """Free space in GiB on the filesystem holding path (0.0 when the
@@ -495,6 +501,17 @@ class Campaign:
         self.live_procs = set()
         self.killed_pids = set()
         self._procs_lock = threading.Lock()
+        # Per-job AVD console ports (competitive audit 2026-11-11): one
+        # port per concurrent EMULATE worker (5554, 5556, ...). The pool
+        # is sized to the EMULATE pool so a worker never blocks waiting
+        # for a port. Ports are the emulator console ports; the adb
+        # serial is emulator-<port>.
+        self._avd_lock = threading.Lock()
+        self._avd_free = [5554 + 2 * i
+                          for i in range(getattr(args, "emulate_par", 8))]
+        self._avd_in_use = set()
+        self._avd_sessions = {}  # jid -> (serial, port) of booted emulator
+
         # V-R10: bootstrap gate, evaluated once per run.
         self.bootstrap_ok, self.bootstrap_missing = check_bootstrap()
         self.state = {
@@ -535,6 +552,46 @@ class Campaign:
             self.cumulative_elapsed_s, 1)
         self.state["cumulative_spend_usd"] = round(
             self.cumulative_spend_usd, 4)
+
+    def alloc_avd_port(self):
+        """Take one free AVD console port (None when the pool is empty)."""
+        with self._avd_lock:
+            if not self._avd_free:
+                return None
+            port = self._avd_free.pop(0)
+            self._avd_in_use.add(port)
+            return port
+
+    def free_avd_port(self, port):
+        """Return an AVD console port to the pool."""
+        with self._avd_lock:
+            self._avd_in_use.discard(port)
+            if port not in self._avd_free:
+                self._avd_free.append(port)
+                self._avd_free.sort()
+
+    def note_avd(self, jid, serial, port):
+        """Record a booted per-job emulator so run_job can tear it down
+        when the attempt ends (success, failure, or exception)."""
+        with self._avd_lock:
+            self._avd_sessions[jid] = (serial, port)
+
+    def teardown_avd(self, jid):
+        """Kill the per-job emulator for jid (best-effort — a failed
+        kill never fails the job) and free its console port. No-op when
+        the job never booted one."""
+        with self._avd_lock:
+            sess = self._avd_sessions.pop(jid, None)
+        if not sess:
+            return
+        serial, port = sess
+        try:
+            boot_script = Path(__file__).resolve().parent / "boot-avd.sh"
+            subprocess.run([str(boot_script), "kill", serial],
+                           capture_output=True, timeout=60)
+        except Exception:
+            pass  # best-effort: the box dies with the campaign anyway
+        self.free_avd_port(port)
 
     def _remaining_seconds(self):
         """Wall-clock seconds this box may still run: the per-box cap
@@ -823,7 +880,15 @@ def run_job(camp: Campaign, job):
     job_dir = camp.work / jid
     log_path = camp.out / "jobs" / jid / "log.txt"
     for attempt in range(1, MAX_ATTEMPTS + 1):
-        outcome = _run_attempt(camp, job, base_attempts + attempt, t0)
+        # The per-job emulator (booted by _run_attempt for EMULATE jobs)
+        # is torn down when the attempt ends — success, failure, or
+        # exception — so a retry gets a clean device and no emulator
+        # outlives its job. teardown_avd is a no-op for jobs that never
+        # booted one.
+        try:
+            outcome = _run_attempt(camp, job, base_attempts + attempt, t0)
+        finally:
+            camp.teardown_avd(jid)
         if outcome[0] == "DONE":
             return
         _, cls, retryable, note, code = outcome
@@ -951,6 +1016,59 @@ def _run_attempt(camp: Campaign, job, attempt, t0):
             return fail("pin")
         emit(f"pin verified: HEAD == {head}")
 
+        # Per-job AVD provisioning (competitive audit 2026-11-11): the
+        # battery assumes a booted emulator, but nothing in the kit ever
+        # booted one — EMULATE jobs would burn their P0 budget waiting
+        # for a device that does not exist, and concurrent workers would
+        # share one device with no serial selection. Boot one emulator
+        # per EMULATE job from the base AVD; ANDROID_SERIAL pins the
+        # battery's bare `adb` calls to exactly that device (adb honors
+        # ANDROID_SERIAL when set — no battery change needed). The
+        # emulator is torn down by run_job (teardown_avd) when the
+        # attempt ends, so a retry gets a clean device. When
+        # boot-avd.sh is absent the job proceeds as before (whatever
+        # device adb sees). An operator-set ANDROID_SERIAL is honored
+        # as-is (no boot). A boot failure is INFRA/retryable.
+        if job["kind"] == "EMULATE" and not env.get("ANDROID_SERIAL"):
+            boot_script = Path(__file__).resolve().parent / "boot-avd.sh"
+            if boot_script.is_file() and os.access(boot_script, os.X_OK):
+                avd_port = camp.alloc_avd_port()
+                if avd_port is None:
+                    msg = ("AVD PORT POOL EXHAUSTED: no free emulator "
+                           "console port — refusing rather than sharing "
+                           "a device")
+                    emit(msg)
+                    return ("FAILED", "INFRA", True, msg, None)
+                try:
+                    boot = subprocess.run(
+                        [str(boot_script), "boot", jid, str(avd_port)],
+                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                        text=True, timeout=AVD_BOOT_TIMEOUT_S, env=env)
+                    boot_rc, boot_out = boot.returncode, boot.stdout
+                except subprocess.TimeoutExpired as exc:
+                    boot_rc, boot_out = None, (exc.stdout or "") \
+                        if isinstance(exc.stdout, str) else ""
+                    boot_out += (f"\n[orchestrator] AVD boot timed out "
+                                 f"after {AVD_BOOT_TIMEOUT_S}s\n")
+                serial = None
+                for line in (boot_out or "").splitlines():
+                    if line.startswith("AVD_SERIAL="):
+                        serial = line.split("=", 1)[1].strip()
+                log.write(boot_out or "")
+                log.flush()
+                if boot_rc != 0 or not serial:
+                    camp.free_avd_port(avd_port)
+                    msg = (f"AVD BOOT FAILED for {jid} on port "
+                           f"{avd_port} (rc={boot_rc}) — see log")
+                    emit(msg)
+                    return ("FAILED", "INFRA", True, msg, None)
+                camp.note_avd(jid, serial, avd_port)
+                env["ANDROID_SERIAL"] = serial
+                emit(f"AVD provisioned: {serial} (port {avd_port})")
+            else:
+                emit("no boot-avd.sh next to the orchestrator — battery "
+                     "uses whatever device adb sees (legacy, no per-job AVD)")
+
         # Run the job command with a hard timeout (SPEC §5).
         emit(f"run: {job['run']} (timeout {job['timeout_min']}m)")
         proc = subprocess.Popen(
@@ -1018,17 +1136,47 @@ def finalize_bundle(camp: Campaign):
             w = waves.setdefault(js["kind"], {"jobs": 0, "wall_s": 0.0})
             w["jobs"] += 1
             w["wall_s"] += js.get("duration_s") or 0.0
+    # Per-job + per-lane cost attribution (competitive audit 2026-11-11):
+    # the campaign's scorecard needs cost per job and per lane so each
+    # campaign can beat the last one on a number, not a feeling. Cost is
+    # wall time priced at the campaign's hourly price — the box bills by
+    # the hour whether a worker is busy or idle, so per-job cost here is
+    # the job's share of the campaign's billable wall, not a metered
+    # per-job charge. None when no hourly price was given.
+    price = camp.hourly_price
+    jobs_out = {}
+    per_lane = {}
+    for jid, js in camp.state["jobs"].items():
+        dur = js.get("duration_s") or 0.0
+        cost = (dur / 3600 * price) if price else None
+        jobs_out[jid] = {"state": js["state"],
+                         "duration_s": js.get("duration_s"),
+                         "failure_class": js.get("failure_class"),
+                         "cost_usd": (round(cost, 4) if cost is not None
+                                      else None)}
+        lane = js.get("lane") or "?"
+        roll = per_lane.setdefault(
+            lane, {"jobs": 0, "done": 0, "failed": 0, "total_s": 0.0,
+                   "cost_usd": 0.0})
+        roll["jobs"] += 1
+        if js["state"] == "DONE":
+            roll["done"] += 1
+        if js["state"] == "FAILED":
+            roll["failed"] += 1
+        roll["total_s"] = round(roll["total_s"] + dur, 1)
+        if cost is not None:
+            roll["cost_usd"] = round(roll["cost_usd"] + cost, 4)
+    wall_h = max((time.time() - camp.started_at) / 3600, 1e-9)
     summary = {
         "campaign": camp.campaign,
         "status": camp.state["status"],
         "wall_s_total": round(time.time() - camp.started_at, 1),
         "cumulative_elapsed_s": round(camp.cost_elapsed_s(), 1),
         "price_ceiling_usd": camp.price_ceiling,
-        "jobs": {jid: {"state": js["state"],
-                       "duration_s": js.get("duration_s"),
-                       "failure_class": js.get("failure_class")}
-                 for jid, js in camp.state["jobs"].items()},
+        "jobs": jobs_out,
+        "per_lane": per_lane,
         "per_kind_job_seconds": waves,
+        "jobs_per_hour": round(len(camp.state["jobs"]) / wall_h, 1),
     }
     # §5.2 error checking: the failure breakdown by class, and how many
     # jobs only finished because a transient infra failure retried.
@@ -1054,6 +1202,27 @@ def finalize_bundle(camp: Campaign):
         "total": total,
         "met": (done / total >= 0.90) if total else False,
     }
+    # Campaign scorecard (competitive audit 2026-11-11): the numbers the
+    # next campaign has to beat — total spend (billable wall priced at
+    # the campaign's hourly price, including the bootstrap tax via the
+    # cost clock), cost per DONE job, and the wall-clock cost of the
+    # campaign. None when no hourly price was given.
+    if price:
+        total_spend = round(camp.cost_elapsed_s() / 3600 * price, 4)
+        summary["total_spend_usd"] = total_spend
+        summary["cost_per_done_job_usd"] = (
+            round(total_spend / done, 4) if done else None)
+    # E14 (competitive audit 2026-11-11): deterministic APK hashes in
+    # summary.json — the audit needs byte-identical APKs per job, so
+    # every APK in the bundle is hashed here (relative path -> sha256).
+    # Files only: a produce pattern that never expanded can land as a
+    # literal directory named `*.apk` in evidence, and opening a
+    # directory must not take down finalisation.
+    apk_hashes = {}
+    for apk in sorted(camp.out.rglob("*.apk")):
+        if apk.is_file():
+            apk_hashes[str(apk.relative_to(camp.out))] = sha256_of(apk)
+    summary["apk_hashes"] = apk_hashes
     (camp.out / "summary.json").write_text(json.dumps(summary, indent=2))
     lines = []
     for p in sorted(camp.out.rglob("*")):
@@ -1221,6 +1390,48 @@ def main(argv=None):
         return 2
     camp.save_state()
 
+    # Schedule-fit warning (competitive audit 2026-11-11): the campaign
+    # only fits inside the box cap if real job durations are far below
+    # their timeouts — and nobody had checked. Worst case, every job
+    # runs to its timeout: BUILD rounds x max BUILD timeout + EMULATE
+    # rounds x max EMULATE timeout, plus the bootstrap tax already
+    # spent. For camp-1 that worst case is 27 BUILD / 10 workers x
+    # 40m + 27 EMULATE / 8 workers x 150m = 108m + 600m = 11.8h
+    # against a 6h box cap — the campaign fits ONLY if real batteries
+    # average well under ~80 min. This is a WARNING, not a refusal:
+    # timeouts are caps, not estimates, and real batteries are expected
+    # at ~10-25 min. But if campaign 0 measures EMULATE p50 above
+    # ~60 min, the wave does not fit and the manifest's timeouts (or
+    # the pool sizes, or the box) must change before campaign 1. The
+    # warning is recorded in state.json so the campaign report carries it.
+    import math
+    build_jobs = [j for j in manifest["jobs"] if j["kind"] == "BUILD"]
+    emulate_jobs = [j for j in manifest["jobs"] if j["kind"] == "EMULATE"]
+    worst_s = 0.0
+    if build_jobs:
+        worst_s += (math.ceil(len(build_jobs) / max(args.build_par, 1))
+                    * max(float(j["timeout_min"]) for j in build_jobs) * 60)
+    if emulate_jobs:
+        worst_s += (math.ceil(len(emulate_jobs) / max(args.emulate_par, 1))
+                    * max(float(j["timeout_min"]) for j in emulate_jobs) * 60)
+    worst_s += camp.pre_orchestrator_s
+    fit_ok = worst_s <= camp.max_seconds
+    if not fit_ok:
+        warn = (f"SCHEDULE-FIT WARNING: worst-case wall "
+                 f"({worst_s / 3600:.1f}h if every job ran to its timeout) "
+                 f"exceeds the effective wall "
+                 f"({camp.max_seconds / 3600:.1f}h) — the campaign fits "
+                 f"only if real job durations are well below their "
+                 f"timeouts (EMULATE must average well under "
+                 f"{(camp.max_seconds - camp.pre_orchestrator_s) / 3600:.1f}h "
+                 f"of wave time). Measure real durations in the report; "
+                 f"if EMULATE p50 exceeds ~60 min, retune timeouts, "
+                 f"pools, or the box before the next campaign.")
+        print(f"[orchestrator] {warn}", file=sys.stderr)
+        with camp.lock:
+            camp.state["schedule_fit_warning"] = warn
+        camp.save_state()
+
     jobs = sorted(manifest["jobs"], key=lambda j: (
         0 if j.get("gate") else 1, signal_rank(j)))
     gate_ids = {j["id"] for j in jobs if j.get("gate")}
@@ -1252,6 +1463,16 @@ def main(argv=None):
             fut.result()
         return futures
 
+    def submit_jobs(job_list):
+        """Submit jobs to their kind pools without waiting (the
+        dependency-aware EMULATE dispatch below waits on its own terms)."""
+        futures = {}
+        for job in job_list:
+            if camp.state["jobs"][job["id"]]["state"] != "PENDING":
+                continue
+            futures[pools[job["kind"]].submit(run_job, camp, job)] = job["id"]
+        return futures
+
     if gate_ids:
         run_set([j for j in jobs if j["id"] in gate_ids])
         failed_gates = [jid for jid in gate_ids
@@ -1260,7 +1481,56 @@ def main(argv=None):
             camp.aborted = f"abort gate failed: {failed_gates}"
             camp.state["status"] = "ABORTED_GATE"
     if not camp.aborted:
-        run_set([j for j in jobs if j["id"] not in gate_ids])
+        # Dependency-aware EMULATE dispatch (competitive audit
+        # 2026-11-11): the old shape submitted all 27 EMULATE jobs at
+        # once, so the first 8 workers parked up to APK_WAIT_S (90 min)
+        # polling for APKs while BUILD was still running — parked
+        # workers cannot serve a battery whose APK is already ready,
+        # and a slow BUILD lane starves its EMULATE slot. Now an
+        # EMULATE job is submitted only when its same-lane BUILD
+        # sibling is DONE (in BUILD-completion order, so the earliest
+        # ready battery runs first), preserving the §11a overlap (a
+        # battery still starts the moment its APK lands) without the
+        # parking. When the BUILD sibling FAILED, the EMULATE job is
+        # marked FAILED at once — no APK will ever arrive, so occupying
+        # a worker for the 90-min wait would burn the window for
+        # nothing. EMULATE jobs with no BUILD sibling (gate jobs
+        # self-build; riders without one) submit immediately, as before.
+        non_gate = [j for j in jobs if j["id"] not in gate_ids]
+        build_by_lane = {j["lane"]: j["id"] for j in non_gate
+                         if j["kind"] == "BUILD"}
+        emulate_jobs = [j for j in non_gate if j["kind"] == "EMULATE"]
+        other_jobs = [j for j in non_gate if j["kind"] != "EMULATE"]
+        futures = submit_jobs(other_jobs)
+        pending = list(emulate_jobs)
+        while pending or any(not f.done() for f in futures):
+            if camp.aborted or camp.deadline_exceeded():
+                break
+            still_pending = []
+            for job in pending:
+                sibling_id = build_by_lane.get(job["lane"])
+                if sibling_id is None:
+                    futures.update(submit_jobs([job]))
+                    continue
+                sibling = camp.state["jobs"][sibling_id]["state"]
+                if sibling == "DONE":
+                    futures.update(submit_jobs([job]))
+                elif sibling == "FAILED":
+                    camp.set_job(
+                        job["id"], state="FAILED",
+                        ended_at=Campaign._ts(), duration_s=0.0,
+                        exit_code=None,
+                        note=("APP: BUILD sibling "
+                              f"{sibling_id} FAILED — no APK will arrive; "
+                              "EMULATE skipped without occupying a worker"),
+                        failure_class="APP")
+                else:
+                    still_pending.append(job)
+            pending = still_pending
+            if pending:
+                time.sleep(10)
+        for fut in futures:
+            fut.result()
 
     for pool in pools.values():
         pool.shutdown(wait=True)
