@@ -10,6 +10,12 @@
 #      with the derived value (max_hours − 15 min) once MAX_HOURS is
 #      validated (§2) — the re-arm cancels the default first, so
 #      exactly one shutdown is ever scheduled.
+#   0c. Install the launch-injected deploy-keys bundle (§0c): the
+#      render script (kit/render-user-data.py) injects the 32 per-repo
+#      read-only deploy keys into DEPLOY_KEYS_BUNDLE at launch time;
+#      the hook decodes them into $BURST_HOME/deploy-keys/ (0700,
+#      each key 0600) for the orchestrator's --keys-dir. Fails loudly
+#      on an empty bundle unless SMOKE=1.
 #   1. Fetch bootstrap.sh, orchestrator.py, cold-run-battery.sh, and
 #      (campaign only) the linted manifest from KIT_SOURCE,
 #      machine-to-machine, and verify each file's sha256 against the
@@ -42,6 +48,10 @@
 # the four files from — http(s)://..., s3://..., or file://... — and
 # the operator records it in the launch record. Do NOT improvise a
 # transport at launch time.
+# The launch payload is produced by kit/render-user-data.py, which
+# fills in the four variables AND injects the deploy-keys bundle from
+# the estate keys dir — do not hand-edit a payload. A hand-edited file
+# has no keys and the §0c hook refuses it (unless SMOKE=1).
 #
 # Exit codes: 0 user-data complete (orchestrator started detached,
 #   or SMOKE=1 proof complete with the orchestrator deliberately not
@@ -73,6 +83,14 @@ BURST_HOME="${BURST_HOME:-/opt/burst}"
 KIT_DIR="${KIT_DIR:-$BURST_HOME/kit}"
 MANIFEST_FILE="${MANIFEST_FILE:-manifest.yaml}"
 LOG="${BURST_USER_DATA_LOG:-/var/log/burst-user-data.log}"
+DEPLOY_KEYS_DIR="${DEPLOY_KEYS_DIR:-$BURST_HOME/deploy-keys}"
+# DEPLOY_KEYS_BUNDLE — newline-separated "<name>:<base64-key>" lines,
+# injected at launch by kit/render-user-data.py from the estate keys
+# dir. This file as committed carries NO key material (empty here);
+# the render script replaces this line in the launch payload ONLY.
+# A rendered payload contains private key bytes: never commit it,
+# never paste it, never put it in the launch record.
+DEPLOY_KEYS_BUNDLE=""
 
 # ------------------------------------------------------------------ logging
 mkdir -p "$(dirname "$LOG")" "$BURST_HOME/logs" "$KIT_DIR"
@@ -147,6 +165,50 @@ arm_self_terminate() {
 }
 # self-terminate-arm-end
 
+# ------------------------------------------- install_deploy_keys (function)
+# Write the launch-injected deploy-keys bundle to $DEPLOY_KEYS_DIR
+# (0700, each key 0600) for the orchestrator's --keys-dir (SPEC §8.1).
+# The bundle is DEPLOY_KEYS_BUNDLE, one "<name>:<base64-key>" line per
+# key, injected at launch by kit/render-user-data.py from the estate
+# keys dir — this file as committed carries NO key material.
+# SMOKE=1 skips installation (the smoke never starts the orchestrator).
+# A campaign launch with an empty bundle FAILS LOUDLY: a box that
+# clones private repos with no keys burns the run on 401s, and a
+# silent https fallback would mask the credential failure.
+install_deploy_keys() {
+  if [ "$SMOKE" = "1" ]; then
+    log "SMOKE=1 — no deploy keys installed (orchestrator not started)"
+    return 0
+  fi
+  [ -n "$DEPLOY_KEYS_BUNDLE" ] \
+    || die "DEPLOY_KEYS_BUNDLE is empty — render the launch payload with kit/render-user-data.py --keys-dir <estate keys dir> (a campaign launch with no deploy keys burns the run on 401s; the bundle is injected at launch time only and never committed)"
+  local keys_dir="$DEPLOY_KEYS_DIR"
+  mkdir -p "$keys_dir" || die "cannot create $keys_dir"
+  chmod 0700 "$keys_dir"
+  local count=0 name b64
+  # `read` splits on the first ':' only (IFS=:); names contain no ':'
+  # and base64 contains no ':', so the split is exact. The loop is
+  # fed by process substitution (printf '%s', no added newline — a
+  # heredoc would append one and create a phantom empty line).
+  # The `|| [ -n "$name" ]` clause also processes a final line with
+  # no trailing newline, so the render script's trailing newline is
+  # a courtesy, not a correctness dependency.
+  while IFS=: read -r name b64 || [ -n "$name" ]; do
+    [ -n "$name" ] && [ -n "$b64" ] || die "malformed deploy-keys bundle line (expected <name>:<base64>)"
+    case "$name" in *[!a-zA-Z0-9_-]*) die "malformed deploy-keys bundle name: '$name'" ;; esac
+    printf '%s' "$b64" | base64 -d > "$keys_dir/$name" \
+      || die "base64 decode failed for deploy key '$name'"
+    chmod 0600 "$keys_dir/$name"
+    # A decoded key must be an OpenSSH private key — a corrupted
+    # bundle fails here, never hands ssh a garbage file.
+    head -1 "$keys_dir/$name" | grep -q '^-----BEGIN OPENSSH PRIVATE KEY-----$' \
+      || die "decoded deploy key '$name' is not an OpenSSH private key — bundle corrupted"
+    count=$((count + 1))
+  done < <(printf '%s' "$DEPLOY_KEYS_BUNDLE")
+  [ "$count" -gt 0 ] || die "deploy-keys bundle decoded to zero keys"
+  log "deploy keys installed: $count keys in $keys_dir (0600 each)"
+}
+
 # ------------------------------------------------------------------ 0. epoch
 # Recorded FIRST, before any fetch or install bills time: this is the
 # cost clock's start (V-R06). Everything the box does from here on is
@@ -177,6 +239,12 @@ SELF_TERMINATE_MIN="$(awk -v h="$MAX_HOURS" 'BEGIN { printf "%d", h * 60 - 15 }'
 SELF_TERMINATE_S=$((SELF_TERMINATE_MIN * 60))
 SELF_TERMINATE_EPOCH=$((BOX_LAUNCH_EPOCH + SELF_TERMINATE_S))
 log "derived max_hours=$MAX_HOURS — self-terminate at ${SELF_TERMINATE_MIN}m after boot (epoch $SELF_TERMINATE_EPOCH)"
+
+# ---------------------------------------------------------------- 0c. keys
+# Install the launch-injected deploy-keys bundle (§8.1) before any
+# fetch or clone can need it. Fails loudly on an empty bundle unless
+# SMOKE=1 (see install_deploy_keys above).
+install_deploy_keys
 
 # ---------------------------------------------------------------- 1. fetch
 # Fetch machine-to-machine (SPEC §5 pull model). Supported schemes:
@@ -262,6 +330,7 @@ setsid nohup python3 "$KIT_DIR/orchestrator.py" "$KIT_DIR/$MANIFEST_FILE" \
   --work "$BURST_HOME/work/$CAMPAIGN" \
   --hourly-price "$HOURLY_PRICE_USD" \
   --box-launch-epoch "$BOX_LAUNCH_EPOCH" \
+  --keys-dir "$DEPLOY_KEYS_DIR" \
   > "$ORCH_LOG" 2>&1 < /dev/null &
 ORCH_PID=$!
 # A short campaign can FINISH inside this window — a dead PID is
