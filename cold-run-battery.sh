@@ -17,8 +17,9 @@
 # (KEY=VALUE lines) for per-lane tuning:
 #   PKG            applicationId incl. debug suffix, e.g. com.raaru.orepit.debug
 #   ACT            launcher activity, e.g. com.raaru.orepit.MainActivity
-#   APK            debug APK path (default: first android-app/app/build/
-#                  outputs/apk/debug/*.apk)
+#   APK            debug APK path (default: first $APP_DIR/build/
+#                  outputs/apk/debug/*.apk, where $APP_DIR is
+#                  android-app/app for lanes or app/ for root-layout repos)
 #   FIRST_SCREEN   comma-separated first-screen markers, e.g.
 #                  "Connect wallet,Before your first pump". If unset, a
 #                  first screen counts as usable when its hierarchy dump
@@ -66,14 +67,34 @@ log() { echo "$@" | tee -a "$RESULTS"; }
 # --- config ---------------------------------------------------------------
 [ -f "$WS/cold-run.conf" ] && set -a && . "$WS/cold-run.conf" && set +a
 
+# App module dir: lanes keep the project under android-app/ (gradlew at
+# android-app/gradlew), but VOIDRUNNER keeps it at the repo root (app/
+# at root). Prefer android-app/app, fall back to root app/ — same
+# build.gradle.kts / AndroidManifest.xml / APK layout either way.
+# (2026-11-11 fix: the hardcoded android-app/ paths made --detect-only
+# fail on the VOIDRUNNER repo — PKG/ACT empty, DETECT FAILED — so
+# voidrunner-l3 would have failed at detection. Verified firsthand by
+# cloning raaruofficial/voidrunner and running --detect-only.)
+detect_app_dir() {
+    if [ -f "$WS/android-app/app/build.gradle.kts" ]; then
+        printf '%s' "android-app/app"
+    elif [ -f "$WS/app/build.gradle.kts" ]; then
+        printf '%s' "app"
+    else
+        return 1
+    fi
+}
+
+APP_DIR="$(detect_app_dir || true)"
+
 detect_base_id() {
-    local gradle="$WS/android-app/app/build.gradle.kts"
+    local gradle="$WS/$APP_DIR/build.gradle.kts"
     [ -f "$gradle" ] || return 1
     grep -m1 'applicationId = ' "$gradle" | sed 's/.*applicationId = "\(.*\)".*/\1/'
 }
 
 detect_pkg() {
-    local gradle="$WS/android-app/app/build.gradle.kts" id=""
+    local gradle="$WS/$APP_DIR/build.gradle.kts" id=""
     id=$(detect_base_id) || return 1
     if grep -q 'applicationIdSuffix = ".debug"' "$gradle"; then
         id="${id}.debug"
@@ -82,7 +103,7 @@ detect_pkg() {
 }
 
 detect_act() {
-    local man="$WS/android-app/app/src/main/AndroidManifest.xml"
+    local man="$WS/$APP_DIR/src/main/AndroidManifest.xml"
     [ -f "$man" ] || return 1
     python3 - "$man" <<'PY' 2>/dev/null
 import sys, xml.etree.ElementTree as ET
@@ -111,8 +132,8 @@ PKG="${PKG:-$(detect_pkg || true)}"
 ACT_RAW="${ACT:-$(detect_act || true)}"
 APK="${APK:-}"
 if [ -z "$APK" ]; then
-    APK=$(ls "$WS"/android-app/app/build/outputs/apk/debug/app-debug.apk 2>/dev/null \
-        || ls "$WS"/android-app/app/build/outputs/apk/debug/*.apk 2>/dev/null | head -n 1 || true)
+    APK=$(ls "$WS"/$APP_DIR/build/outputs/apk/debug/app-debug.apk 2>/dev/null \
+        || ls "$WS"/$APP_DIR/build/outputs/apk/debug/*.apk 2>/dev/null | head -n 1 || true)
 fi
 FIRST_SCREEN="${FIRST_SCREEN:-}"
 CONNECT_TEXT="${CONNECT_TEXT:-Connect wallet}"
