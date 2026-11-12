@@ -43,6 +43,14 @@ REQUIRE_KVM="${REQUIRE_KVM:-1}"
 ANDROID_HOME="${ANDROID_HOME:-$BURST_HOME/android-sdk}"
 CMDLINE_TOOLS_ZIP="commandlinetools-linux-11076708_latest.zip"
 CMDLINE_TOOLS_URL="https://dl.google.com/android/repository/$CMDLINE_TOOLS_ZIP"
+# §3 (2026-11-11): pinned sha256 of the command-line-tools zip as
+# SERVED by dl.google.com, verified 3x against fresh downloads
+# (153,607,504 bytes, valid zip, 104 entries). Google's
+# repository2-1.xml lists d313adb7aedccf6cf0cfca51ec180f0059f5f8f8 —
+# that hash does NOT match the served bytes, so the served hash is
+# pinned, not the catalog hash. If Google re-issues the zip, the hash
+# check below fails loudly and the pin must be re-verified against a
+# fresh download before any launch.
 # Estate pins (SPEC §7): JDK 17 (AGP 8.7.3), platform 35, API 36 image.
 SDK_PACKAGES=(
   "platform-tools"
@@ -188,6 +196,12 @@ phase_sdk() {
     local tmp
     tmp="$(mktemp -d)"
     retry 3 "curl cmdline-tools" curl -fsSL "$CMDLINE_TOOLS_URL" -o "$tmp/tools.zip" || return $?
+    # §3 (2026-11-11): verify the download against the pinned sha256
+    # BEFORE unzipping — no launch on unverified SDK bytes (SPEC §8.2).
+    # A mismatch aborts the phase loudly; the pin is re-verified, never
+    # bypassed.
+    printf '%s  %s\n' "$CMDLINE_TOOLS_SHA256" "$tmp/tools.zip" | sha256sum -c - \
+      || { log "SDK HASH MISMATCH: $CMDLINE_TOOLS_ZIP does not match CMDLINE_TOOLS_SHA256 — aborting, no launch on unverified SDK bytes"; rm -rf "$tmp"; return 1; }
     unzip -q "$tmp/tools.zip" -d "$tmp"
     rm -rf "$ANDROID_HOME/cmdline-tools/latest"
     mv "$tmp/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
