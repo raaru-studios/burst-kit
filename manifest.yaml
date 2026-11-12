@@ -19,12 +19,14 @@
 #      AND no determinable APK source — haunt has no gradlew, no battery
 #      script, no APK anywhere (root-level app/, not android-app/);
 #      gaspumpa has no gradlew and no prebuilt debug APK (only a signed
-#      release APK). Both are marked in place below; the orchestrator has
-#      no disable/skip field, so the block is PROCEDURAL — the fire gate
-#      must exclude or cure them before fire, or they fail as written.
+#      release APK). EXCLUDED 2026-11-11: both jobs are commented out
+#      below (the orchestrator has no disable/skip field) and count
+#      toward neither the failure-rate trip nor the 90% success bar;
+#      re-enable by uncommenting once the lane cures the APK source.
 #      (Gaspumpa ships its own android-app/ci/emulator-smoke.sh.)
 #      Paper Moon chart-scrub VERIFY job added 2026-11-07 (57th job,
-#      pinned) — see paper-moon-chart-scrub below.
+#      pinned) — see paper-moon-chart-scrub below. Live jobs: 55
+#      (57 - gaspumpa-l3 - haunt-l3, both excluded 2026-11-11).
 #   4. RIDERS STUBBED: crown-verify (no Crown repo exists anywhere);
 #      kingdom-dispatch-1/2 (repo exists, HEAD pinned-clean, but the repo
 #      has NO gradle wrapper, so no verifiable build entrypoint).
@@ -555,6 +557,11 @@ jobs:
     custody: none
 
   # gaspumpa-l3 — BLOCKED-ON-APK-SOURCE (BANKAI PAYLOAD 2026-11-07).
+  # EXCLUDED 2026-11-11: job commented out — no determinable APK
+  # source, and the orchestrator has no disable/skip field. It counts
+  # toward neither the failure-rate trip nor the 90% success bar while
+  # excluded. Cure = lane supplies a debug-APK source (wrapper or
+  # prebuilt debug APK); re-enable by uncommenting the job below.
   # Repo + ref VERIFIED (HEAD 17b977af428b, pushed, tracked tree clean;
   # checkout ~/workspace/gaspumpa). Run is the lane's REAL battery:
   # android-app/ci/emulator-smoke.sh (cold run + no-wallet + offline
@@ -567,17 +574,23 @@ jobs:
   # No BUILD sibling feeds this job an APK: as written it fails on a
   # missing APK. Cure = lane supplies a debug-APK source (wrapper or
   # prebuilt debug APK), or the fire gate excludes this job.
-  - id: gaspumpa-l3
-    lane: gas-pumpa
-    kind: EMULATE
-    repo: raaru-studios/gaspumpa-app
-    ref: 17b977af428beaca9b80eb5627823a9b7601b308
-    run: ./android-app/ci/emulator-smoke.sh 36
-    timeout_min: 150
-    produces: [emulator-evidence, results.txt]
-    custody: none
+  # - id: gaspumpa-l3
+  #   lane: gas-pumpa
+  #   kind: EMULATE
+  #   repo: raaru-studios/gaspumpa-app
+  #   ref: 17b977af428beaca9b80eb5627823a9b7601b308
+  #   run: ./android-app/ci/emulator-smoke.sh 36
+  #   timeout_min: 150
+  #   produces: [emulator-evidence, results.txt]
+  #   custody: none
 
   # haunt-l3 — BLOCKED-ON-APK-SOURCE (BANKAI PAYLOAD 2026-11-07).
+  # EXCLUDED 2026-11-11: job commented out — no determinable APK
+  # source, and the orchestrator has no disable/skip field. It counts
+  # toward neither the failure-rate trip nor the 90% success bar while
+  # excluded. Cure = lane adds a wrapper + the battery script at push
+  # time and a BUILD sibling or self-build; re-enable by uncommenting
+  # the job below.
   # Repo + ref VERIFIED (raaruofficial/ore-haunt HEAD 1a447852b9c4,
   # pushed, clean checkout; local checkout ~/workspace/haunt-lane/repo).
   # BLOCKER, verified firsthand: root-level Android project (app/, no
@@ -588,15 +601,15 @@ jobs:
   # no APK to find). Cure = lane adds a wrapper + the battery script at
   # push time and a BUILD sibling or self-build, or the fire gate
   # excludes this job. No APK path guessed.
-  - id: haunt-l3
-    lane: ore-haunt
-    kind: EMULATE
-    repo: raaruofficial/ore-haunt
-    ref: 1a447852b9c4eea25d5192137b55765f8a67926b
-    run: ./cold-run-battery.sh
-    timeout_min: 150
-    produces: [cold-run-report, logcat.txt]
-    custody: none
+  # - id: haunt-l3
+  #   lane: ore-haunt
+  #   kind: EMULATE
+  #   repo: raaruofficial/ore-haunt
+  #   ref: 1a447852b9c4eea25d5192137b55765f8a67926b
+  #   run: ./cold-run-battery.sh
+  #   timeout_min: 150
+  #   produces: [cold-run-report, logcat.txt]
+  #   custody: none
 
   # paper-moon-chart-scrub — VERIFY job (owner-ruled 2026-11-07).
   # Chart-accuracy scrub: Pump Fun frontend API v3 vs the frozen bundled
