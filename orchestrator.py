@@ -36,9 +36,11 @@ import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 from pathlib import Path
 
 # --------------------------------------------------------------------------
@@ -538,6 +540,7 @@ class Campaign:
             "in_flight_killed": 0,
             "relaunches": 0,
             "heartbeat_errors": 0,
+            "lock_gate": None,
             "jobs": {},
         }
         self._load_or_init_state()
@@ -953,6 +956,12 @@ def _run_attempt(camp: Campaign, job, attempt, t0):
     # Burst artifact sharing (§5.1): jobs resolve cross-job evidence
     # (e.g. a BUILD leg's harvested APK) under this absolute bundle dir.
     env["BURST_OUT"] = str(camp.out.resolve())
+    # L-05: jobs can reference the kit dir (for the orchestrator's own
+    # --m01-check mode), the manifest as run, and the keys dir (the
+    # M-01 gate job passes all three through to --m01-check).
+    env["BURST_KIT_DIR"] = str(Path(__file__).resolve().parent)
+    env["BURST_MANIFEST"] = str(camp.manifest_path.resolve())
+    env["BURST_KEYS_DIR"] = str(getattr(camp.args, "keys_dir", "") or "")
     with open(log_path, "a") as log:
         def emit(msg):
             log.write(f"[orchestrator] {msg}\n")
@@ -1233,6 +1242,287 @@ def finalize_bundle(camp: Campaign):
 
 
 # --------------------------------------------------------------------------
+# L-05 dispatch gate: the lock registry (kit/lock-check.py v2) as code.
+# --------------------------------------------------------------------------
+LOCK_REGISTRY_MAX_AGE_S = 3600
+LOCK_SPOT_WORKERS = 8
+LOCK_SPOT_TIMEOUT_S = 30
+
+
+def _ls_remote_head(repo, keys_dir):
+    """Live HEAD of a repo via git ls-remote. SSH with the repo's deploy
+    key when --keys-dir is set and the key exists, else plain https.
+    Returns (head-or-None, method, error-or-None)."""
+    key = None
+    if keys_dir:
+        cand = Path(keys_dir) / repo.replace("/", "-")
+        if cand.is_file():
+            key = cand
+    env = dict(os.environ)
+    if key is not None:
+        env["GIT_SSH_COMMAND"] = (
+            "ssh -i " + shlex.quote(str(key)) +
+            " -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new")
+        url = f"git@github.com:{repo}.git"
+        method = "ssh"
+    else:
+        url = f"https://github.com/{repo}.git"
+        method = "https"
+    try:
+        p = subprocess.run(["git", "ls-remote", url, "HEAD"],
+                           capture_output=True, text=True, env=env,
+                           timeout=LOCK_SPOT_TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        return None, method, f"ls-remote timed out after {LOCK_SPOT_TIMEOUT_S}s"
+    if p.returncode != 0:
+        err = (p.stderr or p.stdout or "").strip()
+        return None, method, (err.splitlines()[-1][:160] if err
+                              else "ls-remote failed")
+    head = p.stdout.split()[0] if p.stdout.split() else None
+    return head, method, None
+
+
+def lock_registry_gate(manifest, registry_path, keys_dir):
+    """L-05: enforce the lock registry at dispatch. Returns
+    (ok, result-dict, refusals-list). Refuses (fail closed) when the
+    registry is missing/unreadable/stale, when any manifest repo is
+    missing from it, UNLOCKED in it, or pinned to a different HEAD
+    than the registry records, or when the parallel ls-remote spot
+    check disagrees on any repo's HEAD. No bundle dir or job exists
+    yet when this runs — the caller refuses before creating them."""
+    refusals = []
+    result = {"registry": str(registry_path), "repos_checked": 0,
+              "spot_check": {}, "refusals": refusals}
+    try:
+        registry = json.loads(Path(registry_path).read_text())
+    except Exception as exc:
+        refusals.append(f"registry unreadable ({registry_path}): {exc}")
+        return False, result, refusals
+    generated_by = str(registry.get("generated_by", ""))
+    if not generated_by.startswith("kit/lock-check.py"):
+        refusals.append(f"registry not produced by kit/lock-check.py "
+                        f"(generated_by={generated_by!r}) — refusing a "
+                        f"hand-written registry")
+        return False, result, refusals
+    epoch = registry.get("generated_at_epoch")
+    if not isinstance(epoch, (int, float)):
+        refusals.append("registry has no generated_at_epoch — cannot "
+                        "check freshness")
+        return False, result, refusals
+    age = time.time() - epoch
+    result["generated_at"] = registry.get("generated_at")
+    result["age_s"] = round(age, 1)
+    if age > LOCK_REGISTRY_MAX_AGE_S:
+        refusals.append(f"registry stale: generated {age / 60:.1f}m ago "
+                        f"(max {LOCK_REGISTRY_MAX_AGE_S // 60}m) — re-run "
+                        f"kit/lock-check.py and re-publish it")
+    by_repo = {}
+    for r in registry.get("riders", []):
+        if r.get("repo"):
+            by_repo[r["repo"]] = r
+    pins = {}
+    for job in manifest["jobs"]:
+        # str(): yaml parses an all-digit SHA as an int (e.g. 40 zeros);
+        # refs are compared and passed to git as strings.
+        pins.setdefault(job["repo"], set()).add(str(job["ref"]))
+    result["repos_checked"] = len(pins)
+    for repo in sorted(pins):
+        entry = by_repo.get(repo)
+        if entry is None:
+            refusals.append(f"{repo}: no registry entry — not verified "
+                            f"by lock-check")
+            continue
+        if entry.get("state") != "LOCKED":
+            failing = [k for k, v in (entry.get("blocking_items") or {}).items()
+                       if str(v).startswith("FAIL")]
+            refusals.append(f"{repo}: registry state {entry.get('state')} "
+                            f"({', '.join(failing) or 'no failing items listed'})")
+            continue
+        refs = pins[repo]
+        if len(refs) != 1 or entry.get("head") not in refs:
+            refusals.append(f"{repo}: registry HEAD "
+                            f"{str(entry.get('head'))[:7]} != manifest pin(s) "
+                            f"{sorted(r[:7] for r in refs)}")
+    # Spot check (second net, L-06): parallel git ls-remote per distinct
+    # manifest repo — the registry is never trusted on its own word.
+    def spot(repo):
+        head, method, err = _ls_remote_head(repo, keys_dir)
+        return repo, head, method, err
+
+    with ThreadPoolExecutor(max_workers=LOCK_SPOT_WORKERS) as ex:
+        for repo, head, method, err in ex.map(spot, sorted(pins)):
+            result["spot_check"][repo] = {
+                "head": head, "method": method,
+                "ok": head is not None and head in pins[repo],
+                "error": err}
+            if head is None:
+                refusals.append(f"{repo}: spot check unreadable "
+                                f"({method}: {err})")
+            elif head not in pins[repo]:
+                refusals.append(f"{repo}: spot check HEAD {head[:7]} != "
+                                f"manifest pin(s) "
+                                f"{sorted(r[:7] for r in pins[repo])}")
+    return (not refusals), result, refusals
+
+
+# --------------------------------------------------------------------------
+# M-01 live rail re-check: the disarm, re-read at dispatch.
+# --------------------------------------------------------------------------
+MONEY_RIDERS = {
+    # repo: (flag path, expected disarmed string)
+    "raaruofficial/voidrunner": (
+        "app/src/main/java/com/voidrunner/app/money/MoneyConfig.kt",
+        "MONEY_RAIL_ENABLED: Boolean = false"),
+    "raaruofficial/paper-moon": (
+        "app/src/main/java/com/hindsight/app/money/MoneyConfig.kt",
+        "SALES_ENABLED: Boolean = false"),
+}
+M01_GIT_TIMEOUT_S = 60
+
+
+def _m01_read_flag(repo, pin, flag_path, keys_dir, tmp_root):
+    """Read the rail flag file for one repo at HEAD and at the manifest
+    pin. Returns (head, head_text, pin_text, error). A clone is the only
+    transport GitHub supports for a read at an arbitrary SHA (git
+    archive --remote is refused by the protocol), so: clone --depth 1
+    (HEAD), then fetch --depth 1 origin <pin> and git show <pin>:<path>.
+    Any unreadable step fails closed with the error, never a pass."""
+    key = None
+    if keys_dir:
+        cand = Path(keys_dir) / repo.replace("/", "-")
+        if cand.is_file():
+            key = cand
+    env = dict(os.environ)
+    if key is not None:
+        env["GIT_SSH_COMMAND"] = (
+            "ssh -i " + shlex.quote(str(key)) +
+            " -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new")
+        url = f"git@github.com:{repo}.git"
+    else:
+        url = f"https://github.com/{repo}.git"
+    work = Path(tmp_root) / repo.replace("/", "-")
+    try:
+        p = subprocess.run(["git", "clone", "--quiet", "--depth", "1",
+                            url, str(work)],
+                           capture_output=True, text=True, env=env,
+                           timeout=M01_GIT_TIMEOUT_S)
+        if p.returncode != 0:
+            err = (p.stderr or p.stdout or "").strip()
+            return None, None, None, (
+                f"clone failed: {err.splitlines()[-1][:160] if err else 'rc=' + str(p.returncode)}")
+        head = subprocess.run(["git", "-C", str(work), "rev-parse", "HEAD"],
+                              capture_output=True, text=True, env=env,
+                              timeout=M01_GIT_TIMEOUT_S).stdout.strip()
+        flag_file = work / flag_path
+        head_text = flag_file.read_text() if flag_file.is_file() else None
+        if head_text is None:
+            return head, None, None, f"flag file {flag_path} missing at HEAD"
+        p = subprocess.run(["git", "-C", str(work), "fetch", "--quiet",
+                            "--depth", "1", "origin", pin],
+                           capture_output=True, text=True, env=env,
+                           timeout=M01_GIT_TIMEOUT_S)
+        if p.returncode != 0:
+            err = (p.stderr or p.stdout or "").strip()
+            return head, head_text, None, (
+                f"fetch of pin {pin[:7]} failed: "
+                f"{err.splitlines()[-1][:160] if err else 'rc=' + str(p.returncode)}")
+        p = subprocess.run(["git", "-C", str(work), "show", f"{pin}:{flag_path}"],
+                           capture_output=True, text=True, env=env,
+                           timeout=M01_GIT_TIMEOUT_S)
+        if p.returncode != 0:
+            return head, head_text, None, (
+                f"flag file {flag_path} missing at pin {pin[:7]}")
+        return head, head_text, p.stdout, None
+    except subprocess.TimeoutExpired:
+        return None, None, None, (
+            f"git operation timed out after {M01_GIT_TIMEOUT_S}s")
+    except Exception as exc:
+        return None, None, None, f"git error: {exc}"
+
+
+def m01_check(manifest, keys_dir, report_path):
+    """M-01: re-read the live money-rail state for every money rider in
+    the manifest and verify the disarm holds, at HEAD and at the
+    manifest pin. Returns 0 iff every rider reads disarmed at both
+    revisions; 1 otherwise. Fail closed: zero money riders in the
+    manifest, an unreadable state, or an armed rail all fail. Writes
+    the JSON report (per-repo lines + verdict) to report_path."""
+    report = {"checked_at": datetime.now(timezone.utc).isoformat(),
+              "manifest": None, "riders": [], "state": "FAIL"}
+    if not isinstance(manifest, dict) or not manifest.get("jobs"):
+        print("M-01 FAIL: manifest has no jobs — nothing to check",
+              file=sys.stderr)
+        report["reason"] = "manifest has no jobs"
+        Path(report_path).write_text(json.dumps(report, indent=2))
+        return 1
+    report["manifest"] = manifest.get("campaign")
+    pins = {}
+    for job in manifest["jobs"]:
+        # str(): yaml parses an all-digit SHA as an int (e.g. 40 zeros);
+        # refs are compared and passed to git as strings.
+        pins.setdefault(job["repo"], set()).add(str(job["ref"]))
+    riders = [r for r in sorted(MONEY_RIDERS) if r in pins]
+    if not riders:
+        print("M-01 FAIL: no money rider in this manifest — the rail "
+              "check has nothing to verify (failing closed: a check "
+              "that verifies nothing is a vacuous pass)",
+              file=sys.stderr)
+        report["reason"] = "no money riders in manifest"
+        Path(report_path).write_text(json.dumps(report, indent=2))
+        return 1
+    ok_all = True
+    with tempfile.TemporaryDirectory(prefix="m01-check-") as tmp_root:
+        for repo in riders:
+            flag_path, expected = MONEY_RIDERS[repo]
+            refs = pins[repo]
+            row = {"repo": repo, "flag": flag_path, "expect": expected,
+                   "state": "FAIL"}
+            if len(refs) != 1:
+                row["reason"] = (f"manifest pins {len(refs)} different "
+                                 f"refs for {repo} — refusing an ambiguous pin")
+                ok_all = False
+            else:
+                pin = next(iter(refs))
+                head, head_text, pin_text, err = _m01_read_flag(
+                    repo, pin, flag_path, keys_dir, tmp_root)
+                row["head"] = head
+                row["pin"] = pin
+                if err:
+                    row["reason"] = err
+                    ok_all = False
+                else:
+                    head_ok = expected in (head_text or "")
+                    pin_ok = expected in (pin_text or "")
+                    row["head_disarmed"] = head_ok
+                    row["pin_disarmed"] = pin_ok
+                    if head_ok and pin_ok:
+                        row["state"] = "PASS"
+                        row["reason"] = (f"flag reads disarmed at HEAD "
+                                         f"{head[:7]} and pin {pin[:7]}")
+                    else:
+                        which = []
+                        if not head_ok:
+                            which.append(f"HEAD {head[:7]}")
+                        if not pin_ok:
+                            which.append(f"pin {pin[:7]}")
+                        row["reason"] = (f"rail NOT disarmed at "
+                                         f"{', '.join(which)} (expected "
+                                         f"'{expected}' in {flag_path})")
+                        ok_all = False
+            report["riders"].append(row)
+            print(f"M-01 {row['state']}: {repo} "
+                  f"head={str(row.get('head'))[:7] if row.get('head') else '-'} "
+                  f"pin={str(row.get('pin'))[:7] if row.get('pin') else '-'} "
+                  f"— {row['reason']}")
+    report["state"] = "PASS" if ok_all else "FAIL"
+    Path(report_path).write_text(json.dumps(report, indent=2))
+    print(f"M-01 {'PASS' if ok_all else 'FAIL'}: "
+          f"{len(report['riders'])} money rider(s) checked — "
+          f"report {report_path}")
+    return 0 if ok_all else 1
+
+
+# --------------------------------------------------------------------------
 def main(argv=None):
     ap = argparse.ArgumentParser(description="burst-compute orchestrator")
     ap.add_argument("manifest")
@@ -1269,6 +1559,31 @@ def main(argv=None):
         "is honored as-is) and a missing key refuses loudly rather "
         "than falling back to https. Unset: plain https clone as "
         "before. Also honored via env BURST_DEPLOY_KEYS_DIR.")
+    ap.add_argument("--lock-registry", default=None,
+                    help="L-05 dispatch gate: path to parallel-lock.json "
+                    "(kit/lock-check.py v2, generated <1h before "
+                    "dispatch). When set, the run refuses (exit 2, "
+                    "before any bundle dir or job) unless the registry "
+                    "is fresh, every manifest repo reads LOCKED in it "
+                    "with its pin equal to the registry HEAD, and a "
+                    "parallel git ls-remote spot check agrees on every "
+                    "repo's HEAD. Unset: the gate is not enforced "
+                    "(a warning is printed); user-data.sh always "
+                    "passes it.")
+    ap.add_argument("--m01-check", action="store_true",
+                    help="M-01 live rail re-check (standalone mode, like "
+                    "--lint-only): re-read the live money-rail state "
+                    "for every money rider in the manifest (VOIDRUNNER "
+                    "+ Paper Moon) at both HEAD and the manifest pin "
+                    "and verify the disarm holds. Exit 0 iff every "
+                    "rider's flag reads disarmed at both revisions; "
+                    "exit 1 otherwise (unreadable state or an armed "
+                    "rail fails closed). Writes a JSON report to "
+                    "--report (default m01-rail-check.json in the cwd) "
+                    "for evidence harvesting.")
+    ap.add_argument("--report", default="m01-rail-check.json",
+                    help="JSON report path for --m01-check (default: "
+                    "m01-rail-check.json in the cwd)")
     # Pool defaults are the low end of the SPEC §5 ranges: 10 daemons +
     # 8 AVDs peak ~144 GB on the 192 GB box, leaving headroom for daemon
     # spikes; 12+10 could peak ~176 GB and risk OOM kills (SPEC §9).
@@ -1284,6 +1599,11 @@ def main(argv=None):
         print(f"MANIFEST PARSE FAILURE — campaign will not run: {exc}",
               file=sys.stderr)
         return 2
+    # M-01 is a standalone verification mode (like --lint-only): it
+    # checks the rail only, so it runs before the lint refusal — a
+    # manifest with lint errors still gets its rail state read.
+    if args.m01_check:
+        return m01_check(manifest, args.keys_dir, args.report)
     errs = lint_manifest(manifest if isinstance(manifest, dict) else {})
     if errs:
         print("MANIFEST LINT REFUSAL — campaign will not run:", file=sys.stderr)
@@ -1336,6 +1656,29 @@ def main(argv=None):
               file=sys.stderr)
         return 2
 
+    # L-05 dispatch gate: the lock registry, enforced before any bundle
+    # dir or job exists. --lock-registry is always passed by
+    # user-data.sh (§4); a hand run without it proceeds without the
+    # gate, loudly noted.
+    lock_gate_result = None
+    if args.lock_registry:
+        gate_ok, lock_gate_result, gate_refusals = lock_registry_gate(
+            manifest, args.lock_registry, args.keys_dir)
+        if not gate_ok:
+            print("LOCK REGISTRY REFUSAL — dispatch stopped before any "
+                  "bundle dir or job:", file=sys.stderr)
+            for r in gate_refusals:
+                print(f"  - {r}", file=sys.stderr)
+            return 2
+        print(f"LOCK REGISTRY OK: {lock_gate_result['repos_checked']} "
+              f"manifest repos LOCKED in {args.lock_registry} "
+              f"(generated {lock_gate_result['age_s']:.0f}s ago) + "
+              f"ls-remote spot check agrees on all of them")
+    else:
+        print("LOCK REGISTRY NOT ENFORCED: no --lock-registry passed "
+              "(user-data.sh always passes it; a hand run without it "
+              "proceeds without the dispatch gate)", file=sys.stderr)
+
     campaign = str(manifest["campaign"])
     out_dir = Path(args.out or f"results/{campaign}")
     work_dir = Path(args.work or f"work/{campaign}")
@@ -1370,6 +1713,10 @@ def main(argv=None):
         return 2
 
     camp = Campaign(manifest, args.manifest, out_dir, work_dir, args)
+    if lock_gate_result is not None:
+        with camp.lock:
+            camp.state["lock_gate"] = lock_gate_result
+        camp.save_state()
     if camp.relaunches > 2:
         print(f"RELAUNCH CAP: campaign {campaign} has already relaunched "
               f"{camp.relaunches} times (max 2 per SPEC §9) — refusing to "
@@ -1474,7 +1821,15 @@ def main(argv=None):
         return futures
 
     if gate_ids:
-        run_set([j for j in jobs if j["id"] in gate_ids])
+        # Gate jobs run SEQUENTIALLY in sorted order (cheapest first:
+        # m01-rail-check, priority 0, before booth-l3) and the first
+        # failure stops the rest — a failed cheap gate must not pay
+        # for an expensive gate behind it (L-05/M-01). The existing
+        # failed_gates check below still aborts the push.
+        for gj in [j for j in jobs if j["id"] in gate_ids]:
+            run_set([gj])
+            if camp.state["jobs"][gj["id"]]["state"] == "FAILED":
+                break
         failed_gates = [jid for jid in gate_ids
                         if camp.state["jobs"][jid]["state"] == "FAILED"]
         if failed_gates:

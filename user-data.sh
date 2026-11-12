@@ -11,13 +11,14 @@
 #      validated (§2) — the re-arm cancels the default first, so
 #      exactly one shutdown is ever scheduled.
 #   0c. Install the launch-injected deploy-keys bundle (§0c): the
-#      render script (kit/render-user-data.py) injects the 32 per-repo
+#      render script (kit/render-user-data.py) injects the 35 per-repo
 #      read-only deploy keys into DEPLOY_KEYS_BUNDLE at launch time;
 #      the hook decodes them into $BURST_HOME/deploy-keys/ (0700,
 #      each key 0600) for the orchestrator's --keys-dir. Fails loudly
 #      on an empty bundle unless SMOKE=1.
 #   1. Fetch bootstrap.sh, orchestrator.py, cold-run-battery.sh, and
-#      (campaign only) the linted manifest from KIT_SOURCE,
+#      (campaign only) the linted manifest + the lock registry
+#      (parallel-lock.json, L-05) from KIT_SOURCE,
 #      machine-to-machine, and verify each file's sha256 against the
 #      hashes recorded at checklist step 0. A hash mismatch aborts
 #      loudly — no launch on unverified kit bytes (SPEC §8.2).
@@ -45,7 +46,7 @@
 # or empty — it never guesses a kit location, a price, a runtime, or
 # a hash list. KIT_SOURCE is undesignated until the operator names it
 # (IGNITION N-3, still open): it is a location prefix the box fetches
-# the four files from — http(s)://..., s3://..., or file://... — and
+# the five files from — http(s)://..., s3://..., or file://... — and
 # the operator records it in the launch record. Do NOT improvise a
 # transport at launch time.
 # The launch payload is produced by kit/render-user-data.py, which
@@ -223,10 +224,10 @@ log "box launch epoch: $BOX_LAUNCH_EPOCH ($(date -u -d "@$BOX_LAUNCH_EPOCH" +%Y-
 arm_self_terminate 60 $((BOX_LAUNCH_EPOCH + 3600))
 
 # ------------------------------------------------------- 0b. required vars
-[ -n "$KIT_SOURCE" ]       || die "KIT_SOURCE is unset — the kit source is undesignated (IGNITION N-3): name the read-only location the box fetches bootstrap.sh, orchestrator.py, cold-run-battery.sh, and the manifest from, and record it in the launch record. No launch without it."
+[ -n "$KIT_SOURCE" ]       || die "KIT_SOURCE is unset — the kit source is undesignated (IGNITION N-3): name the read-only location the box fetches bootstrap.sh, orchestrator.py, cold-run-battery.sh, the manifest, and parallel-lock.json from, and record it in the launch record. No launch without it."
 [ -n "$HOURLY_PRICE_USD" ] || die "HOURLY_PRICE_USD is unset — pass the live \$/hr from the pre-flight print (checklist step 2). No launch without it."
 [ -n "$MAX_HOURS" ]        || die "MAX_HOURS is unset — pass the derived max_hours from the pre-flight print (checklist step 2: min(6, (cap - \$0.50) / live price)). No launch without it."
-[ -n "$KIT_SHA256S" ]      || die "KIT_SHA256S is unset — pass the sha256sum-format lines for the kit files, recorded at checklist step 0 (four lines for a campaign, three for SMOKE=1 — the smoke fetches no manifest). No launch on unverified kit bytes (SPEC §8.2)."
+[ -n "$KIT_SHA256S" ]      || die "KIT_SHA256S is unset — pass the sha256sum-format lines for the kit files, recorded at checklist step 0 (five lines for a campaign, three for SMOKE=1 — the smoke fetches no manifest and no lock registry). No launch on unverified kit bytes (SPEC §8.2)."
 case "$MAX_HOURS" in
   ''|*[!0-9.]*)
     die "MAX_HOURS='$MAX_HOURS' is not a number — pass the derived max_hours (checklist step 2)." ;;
@@ -282,15 +283,16 @@ if [ "$SMOKE" = "1" ]; then
   log "SMOKE=1 — no manifest fetch (the smoke fetches no manifest, F-3)"
 else
   fetch_one "$MANIFEST_FILE"
+  fetch_one parallel-lock.json
 fi
 chmod +x "$KIT_DIR/bootstrap.sh" "$KIT_DIR/orchestrator.py" \
   "$KIT_DIR/cold-run-battery.sh"
 
 # ------------------------------------------------------- 1b. hash verify
 # KIT_SHA256S holds sha256sum-format lines ("<sha256>  <filename>")
-# for exactly the files fetched above — four for a campaign (three
-# kit files + manifest), three for SMOKE=1 (kit files only, no
-# manifest) — as recorded at checklist step 0.
+# for exactly the files fetched above — five for a campaign (three
+# kit files + manifest + lock registry), three for SMOKE=1 (kit files
+# only, no manifest, no lock registry) — as recorded at checklist step 0.
 printf '%s\n' "$KIT_SHA256S" > "$KIT_DIR/kit.sha256"
 (cd "$KIT_DIR" && sha256sum -c kit.sha256) \
   || die "HASH MISMATCH: a fetched kit file does not match the step-0 hashes — aborting, no launch on unverified kit bytes (SPEC §8.2)"
@@ -331,6 +333,7 @@ setsid nohup python3 "$KIT_DIR/orchestrator.py" "$KIT_DIR/$MANIFEST_FILE" \
   --hourly-price "$HOURLY_PRICE_USD" \
   --box-launch-epoch "$BOX_LAUNCH_EPOCH" \
   --keys-dir "$DEPLOY_KEYS_DIR" \
+  --lock-registry "$KIT_DIR/parallel-lock.json" \
   > "$ORCH_LOG" 2>&1 < /dev/null &
 ORCH_PID=$!
 # A short campaign can FINISH inside this window — a dead PID is

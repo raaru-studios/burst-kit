@@ -2,7 +2,7 @@
 """render-user-data.py — build the burst launch payload (SPEC §8.1/§9).
 
 Reads kit/user-data.sh, fills in the four REQUIRED launch variables,
-and (for a campaign launch) injects the 32 per-repo read-only SSH
+and (for a campaign launch) injects the 35 per-repo read-only SSH
 deploy keys from the estate keys dir into DEPLOY_KEYS_BUNDLE — the
 hook in user-data.sh decodes the bundle on the box into
 $BURST_HOME/deploy-keys/ (0700, each key 0600) and the orchestrator
@@ -36,13 +36,20 @@ lacks a key):
     python3 kit/render-user-data.py --check-only \\
         --keys-dir ... --manifest draft-camp-1.yaml
 
-Manifest coverage is a WARNING at render time, not a refusal: the
-current manifests list repos with no key (clink-app, iris-app,
-time-wizard-app — private, no deploy key issued), and refusing the
-render would make the mechanism unusable while that gap is decided.
-The gap is a launch blocker of its own (the orchestrator refuses a
-job whose key is missing) and is reported, not hidden. --check-only
-is the hard gate for the launch checklist.
+--check-only REQUIRES --manifest: a bare --check-only (no manifest)
+is a VACUOUS pass — 0 repos covered, exit 0 — and must never be read
+as a coverage proof (L-05, 2026-11-12). The real gate always passes
+--manifest explicitly.
+
+Manifest coverage is a WARNING at render time, not a refusal: a
+manifest could list a repo with no key, and refusing the render
+would make the mechanism unusable while that gap is decided. (The
+2026-11-11 gap — clink-app, iris-app, time-wizard-app, private with
+no deploy key issued — was CURED 2026-11-12: 35 keys, all 33 camp-1
+repos + the voidrunner-only repo covered; --check-only passes on
+both manifests.) The gap is a launch blocker of its own (the
+orchestrator refuses a job whose key is missing) and is reported,
+not hidden. --check-only is the hard gate for the launch checklist.
 """
 
 import argparse
@@ -153,7 +160,9 @@ def main():
                          "--check-only). Must be OUTSIDE the kit dir.")
     ap.add_argument("--check-only", action="store_true",
                     help="verify manifest key coverage only; write no "
-                         "payload; exit 1 if any manifest repo lacks a key")
+                         "payload; exit 1 if any manifest repo lacks a key. "
+                         "--manifest is REQUIRED: a bare --check-only is a "
+                         "vacuous pass (0 repos, exit 0).")
     args = ap.parse_args()
 
     script_dir = Path(__file__).resolve().parent
@@ -192,6 +201,11 @@ def main():
         else:
             print(f"coverage: all {len(repos)} manifest repos have a key")
     if args.check_only:
+        if not args.manifest:
+            fail("--check-only requires --manifest: a bare --check-only "
+                 "is a VACUOUS pass (0 manifest repos covered, exit 0) "
+                 "and must never be read as a coverage proof — pass "
+                 "--manifest explicitly (L-05)")
         if unkeyed:
             fail(f"coverage gate: {len(unkeyed)} manifest repo(s) lack a "
                  "deploy key")
