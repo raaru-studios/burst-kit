@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-11-14T01:12:57.345505+00:00",
-  "generated_at_epoch": 1794618777,
+  "generated_at": "2026-11-14T01:35:09.668645+00:00",
+  "generated_at_epoch": 1794620109,
   "generated_by": "kit/lock-check.py v2",
   "campaign": "camp-1",
   "manifests": [
@@ -14,7 +14,7 @@
     "path": "/home/hatch/workspace/burst-compute/hidden/lock-check-cache.json",
     "no_cache": false
   },
-  "code_search_at": "2026-11-14T01:12:52.424459+00:00",
+  "code_search_at": "2026-11-14T01:35:06.230861+00:00",
   "riders": [
     {
       "dapp": "voidrunner",
