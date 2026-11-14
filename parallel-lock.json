@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-11-12T21:36:41.454474+00:00",
-  "generated_at_epoch": 1794519401,
+  "generated_at": "2026-11-14T01:12:57.345505+00:00",
+  "generated_at_epoch": 1794618777,
   "generated_by": "kit/lock-check.py v2",
   "campaign": "camp-1",
   "manifests": [
@@ -14,7 +14,7 @@
     "path": "/home/hatch/workspace/burst-compute/hidden/lock-check-cache.json",
     "no_cache": false
   },
-  "code_search_at": "2026-11-12T21:36:36.961214+00:00",
+  "code_search_at": "2026-11-14T01:12:52.424459+00:00",
   "riders": [
     {
       "dapp": "voidrunner",
@@ -235,704 +235,731 @@
     {
       "dapp": "ore-rescue",
       "repo": "raaru-studios/ore-rescue-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-rescue-app/commits -> HEAD 698c24d",
-        "manifest ref == live HEAD 698c24d",
+        "gh api repos/raaru-studios/ore-rescue-app/commits -> HEAD eab4b2c",
+        "manifest ref == live HEAD eab4b2c",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-rescue"
       ],
       "conditions": [],
-      "head": "698c24d64cddb28e7f49f6a2fe227bed1f8a968d",
+      "head": "eab4b2c05a434deef3b2b44d917fbd908774f01a",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:04.153010+00:00"
+      "locked_at": "2026-11-13T18:08:26.449852+00:00"
     },
     {
       "dapp": "ore-booth",
       "repo": "raaru-studios/ore-booth-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-booth-app/commits -> HEAD 377cb6f",
-        "manifest ref == live HEAD 377cb6f",
+        "gh api repos/raaru-studios/ore-booth-app/commits -> HEAD c7c4916",
+        "manifest ref == live HEAD c7c4916",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-booth"
       ],
       "conditions": [],
-      "head": "377cb6f1e737e0e2c118d5d2d09a85a17f063e45",
+      "head": "c7c49168683e6b9a7e72fee5f5603a397d6f3ae2",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:09.513511+00:00"
+      "locked_at": "2026-11-13T18:08:27.099808+00:00"
     },
     {
       "dapp": "ore-almanac",
       "repo": "raaru-studios/ore-almanac-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-almanac-app/commits -> HEAD 6960d15",
-        "manifest ref == live HEAD 6960d15",
+        "gh api repos/raaru-studios/ore-almanac-app/commits -> HEAD 7f26afd",
+        "manifest ref == live HEAD 7f26afd",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-almanac"
       ],
       "conditions": [],
-      "head": "6960d15dac3aae548948e460e36e009267c997b6",
+      "head": "7f26afde8059811b17d4dd2cf15ff726cf07c638",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:09.513590+00:00"
+      "locked_at": "2026-11-13T18:08:27.099858+00:00"
     },
     {
       "dapp": "ore-anomaly",
       "repo": "raaru-studios/ore-anomaly-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-anomaly-app/commits -> HEAD ffa98fb",
-        "manifest ref == live HEAD ffa98fb",
+        "gh api repos/raaru-studios/ore-anomaly-app/commits -> HEAD 19c01a2",
+        "manifest ref == live HEAD 19c01a2",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-anomaly"
       ],
       "conditions": [],
-      "head": "ffa98fbaa643564879b5e9cb2bd830d9d6593cf6",
+      "head": "19c01a28ba77786c8df7fb7f9ce47eaf3e80f667",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:09.739361+00:00"
+      "locked_at": "2026-11-13T18:08:27.174102+00:00"
     },
     {
       "dapp": "ore-bounty",
       "repo": "raaru-studios/ore-bounty-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-bounty-app/commits -> HEAD 8691dfd",
-        "manifest ref == live HEAD 8691dfd",
+        "gh api repos/raaru-studios/ore-bounty-app/commits -> HEAD 6a47ee2",
+        "manifest ref == live HEAD 6a47ee2",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-bounty"
       ],
       "conditions": [],
-      "head": "8691dfd622d31a404a7f27ef3f2d09a486618891",
+      "head": "6a47ee2aaa3171a88a48b02f2f4f695b8e30bffd",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:09.739397+00:00"
+      "locked_at": "2026-11-13T18:08:27.174151+00:00"
     },
     {
       "dapp": "ore-circle",
       "repo": "raaru-studios/ore-circle-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-circle-app/commits -> HEAD 581473f",
-        "manifest ref == live HEAD 581473f",
+        "gh api repos/raaru-studios/ore-circle-app/commits -> HEAD 56b9dec",
+        "manifest ref == live HEAD 56b9dec",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-circle"
       ],
       "conditions": [],
-      "head": "581473f4ac97201a8e8868d1317718fa03646a93",
+      "head": "56b9dec80a649754f7d70e7098857dc2d0328b4e",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:15.328029+00:00"
+      "locked_at": "2026-11-13T18:08:27.174165+00:00"
     },
     {
       "dapp": "ore-data",
       "repo": "raaru-studios/ore-data-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-data-app/commits -> HEAD e53913b",
-        "manifest ref == live HEAD e53913b",
+        "gh api repos/raaru-studios/ore-data-app/commits -> HEAD a1cbab8",
+        "manifest ref == live HEAD a1cbab8",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-data"
       ],
       "conditions": [],
-      "head": "e53913bdcbba94ed787913a9a7bb0e4450e2e4cd",
+      "head": "a1cbab8cbb1bb1e56cb1880a7653564bd2d98ae1",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:15.528922+00:00"
+      "locked_at": "2026-11-13T18:08:27.174176+00:00"
     },
     {
       "dapp": "ore-edge",
       "repo": "raaru-studios/ore-edge-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-edge-app/commits -> HEAD 2551b55",
-        "manifest ref == live HEAD 2551b55",
+        "gh api repos/raaru-studios/ore-edge-app/commits -> HEAD 7bf7322",
+        "manifest ref == live HEAD 7bf7322",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-edge"
       ],
       "conditions": [],
-      "head": "2551b55cc4a271d448b861c82464d98a6e2bf9b5",
+      "head": "7bf73224160ee81db1133913ea522b7c8eb699fe",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:15.528967+00:00"
+      "locked_at": "2026-11-13T18:08:27.174187+00:00"
     },
     {
       "dapp": "ore-escrow",
       "repo": "raaru-studios/ore-escrow-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-escrow-app/commits -> HEAD db3f70b",
-        "manifest ref == live HEAD db3f70b",
+        "gh api repos/raaru-studios/ore-escrow-app/commits -> HEAD 41a1af8",
+        "manifest ref == live HEAD 41a1af8",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-escrow"
       ],
       "conditions": [],
-      "head": "db3f70bf988023dcf151323d644fb01fae71b415",
+      "head": "41a1af8490f2767facac74fd1aec58eda8632110",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:21.024992+00:00"
+      "locked_at": "2026-11-13T18:08:27.174198+00:00"
     },
     {
       "dapp": "ore-fleet",
       "repo": "raaru-studios/ore-fleet-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-fleet-app/commits -> HEAD 159cdab",
-        "manifest ref == live HEAD 159cdab",
+        "gh api repos/raaru-studios/ore-fleet-app/commits -> HEAD 5677699",
+        "manifest ref == live HEAD 5677699",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-fleet"
       ],
       "conditions": [],
-      "head": "159cdab4e16122a84d06dd6f47954be6fa910ceb",
+      "head": "5677699edd4663b4e75d1ab3304c00e862902fe3",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:26.349024+00:00"
+      "locked_at": "2026-11-13T18:08:27.174209+00:00"
     },
     {
       "dapp": "ore-guild",
       "repo": "raaru-studios/ore-guild-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-guild-app/commits -> HEAD 3d6082a",
-        "manifest ref == live HEAD 3d6082a",
+        "gh api repos/raaru-studios/ore-guild-app/commits -> HEAD f97fb0d",
+        "manifest ref == live HEAD f97fb0d",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-guild"
       ],
       "conditions": [],
-      "head": "3d6082a61a6859236da7ac4673a9adf5dc81da4a",
+      "head": "f97fb0d48fcd9573407182db99c19074e07e24cb",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:26.349065+00:00"
+      "locked_at": "2026-11-13T18:08:27.174220+00:00"
     },
     {
       "dapp": "ore-harvest",
       "repo": "raaru-studios/ore-harvest-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-harvest-app/commits -> HEAD b5a4bdd",
-        "manifest ref == live HEAD b5a4bdd",
+        "gh api repos/raaru-studios/ore-harvest-app/commits -> HEAD 0d22090",
+        "manifest ref == live HEAD 0d22090",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-harvest"
       ],
       "conditions": [],
-      "head": "b5a4bddce88c67b0e7eeb614b22b1ee7f0037cfb",
+      "head": "0d220907dbbcb0034192980685dec3275346965c",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:26.530875+00:00"
+      "locked_at": "2026-11-13T18:08:27.174231+00:00"
     },
     {
       "dapp": "ore-ledger",
       "repo": "raaru-studios/ore-ledger-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-ledger-app/commits -> HEAD cafbdbc",
-        "manifest ref == live HEAD cafbdbc",
+        "gh api repos/raaru-studios/ore-ledger-app/commits -> HEAD c58e5b6",
+        "manifest ref == live HEAD c58e5b6",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-ledger"
       ],
       "conditions": [],
-      "head": "cafbdbc05a6b3187ff6471d87865e988fefb5dfd",
+      "head": "c58e5b6d1f15f0ef919a5bb14992eb5d5b3d9ea9",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:26.530925+00:00"
+      "locked_at": "2026-11-13T18:08:27.174241+00:00"
     },
     {
       "dapp": "ore-legacy",
       "repo": "raaru-studios/ore-legacy-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-legacy-app/commits -> HEAD 3ce827f",
-        "manifest ref == live HEAD 3ce827f",
+        "gh api repos/raaru-studios/ore-legacy-app/commits -> HEAD 22ad3d0",
+        "manifest ref == live HEAD 22ad3d0",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-legacy"
       ],
       "conditions": [],
-      "head": "3ce827fcbb3e7f165ee2107deb5e644b2bd1c284",
+      "head": "22ad3d063b3470c1d772fdb5425166d3b4e9d470",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:31.877273+00:00"
+      "locked_at": "2026-11-13T18:08:27.174251+00:00"
     },
     {
       "dapp": "ore-machine",
       "repo": "raaru-studios/ore-machine-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-machine-app/commits -> HEAD 0cd3105",
-        "manifest ref == live HEAD 0cd3105",
+        "gh api repos/raaru-studios/ore-machine-app/commits -> HEAD d5454f0",
+        "manifest ref == live HEAD d5454f0",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-machine"
       ],
       "conditions": [],
-      "head": "0cd31053f14251346d4c11c67f44d1f2a6fc79ae",
+      "head": "d5454f01658cdad438d9973ad1b34ac68868f8ad",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:33.557700+00:00"
+      "locked_at": "2026-11-13T18:08:27.174261+00:00"
     },
     {
       "dapp": "ore-pay",
       "repo": "raaru-studios/ore-pay-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-pay-app/commits -> HEAD a3f5d1d",
-        "manifest ref == live HEAD a3f5d1d",
+        "gh api repos/raaru-studios/ore-pay-app/commits -> HEAD e79c032",
+        "manifest ref == live HEAD e79c032",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-pay"
       ],
       "conditions": [],
-      "head": "a3f5d1dc949edf3846dcb0db125dc255a0adb4d6",
+      "head": "e79c0323bb9a197cebc953bb429e99cebf6bd632",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:33.557749+00:00"
+      "locked_at": "2026-11-13T18:08:27.174272+00:00"
     },
     {
       "dapp": "ore-pin",
       "repo": "raaru-studios/ore-pin-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-pin-app/commits -> HEAD 6ed0d2a",
-        "manifest ref == live HEAD 6ed0d2a",
+        "gh api repos/raaru-studios/ore-pin-app/commits -> HEAD 6249b81",
+        "manifest ref == live HEAD 6249b81",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-pin"
       ],
       "conditions": [],
-      "head": "6ed0d2af97694cca75c6a3dc8dc88f3a52fa2ddb",
+      "head": "6249b813fe1db9037149171da73b6a085166f17f",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:37.267046+00:00"
+      "locked_at": "2026-11-13T18:08:51.447354+00:00"
     },
     {
       "dapp": "ore-pit",
       "repo": "raaru-studios/ore-pit-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-pit-app/commits -> HEAD 9e89361",
-        "manifest ref == live HEAD 9e89361",
+        "gh api repos/raaru-studios/ore-pit-app/commits -> HEAD b7af50d",
+        "manifest ref == live HEAD b7af50d",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-pit"
       ],
       "conditions": [],
-      "head": "9e89361c91fef6c6c185ca795196becd8376a633",
+      "head": "b7af50d87ba49d51c46ed627e1d22e6f3d7b5ad8",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:42.523229+00:00"
+      "locked_at": "2026-11-13T18:08:51.922817+00:00"
     },
     {
       "dapp": "ore-pocket",
       "repo": "raaru-studios/ore-pocket-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-pocket-app/commits -> HEAD 0fe9d2e",
-        "manifest ref == live HEAD 0fe9d2e",
+        "gh api repos/raaru-studios/ore-pocket-app/commits -> HEAD cda5b4f",
+        "manifest ref == live HEAD cda5b4f",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-pocket"
       ],
       "conditions": [],
-      "head": "0fe9d2eb3e1cf2cfa761559c5489540289e0512a",
+      "head": "cda5b4f493e7cebafaf9b0cffed756462875d0ed",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:42.523272+00:00"
+      "locked_at": "2026-11-13T18:08:54.423034+00:00"
     },
     {
       "dapp": "ore-print",
       "repo": "raaru-studios/ore-print-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-print-app/commits -> HEAD b16da79",
-        "manifest ref == live HEAD b16da79",
+        "gh api repos/raaru-studios/ore-print-app/commits -> HEAD b050307",
+        "manifest ref == live HEAD b050307",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-print"
       ],
       "conditions": [],
-      "head": "b16da796db81a7a1c5fb7dbd44ea82ac7684b1ce",
+      "head": "b050307fb4296a7bc0ae31ea98eb01984e973c02",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:42.582200+00:00"
+      "locked_at": "2026-11-13T18:08:54.423075+00:00"
     },
     {
       "dapp": "ore-radio",
       "repo": "raaru-studios/ore-radio-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-radio-app/commits -> HEAD de8e4f8",
-        "manifest ref == live HEAD de8e4f8",
+        "gh api repos/raaru-studios/ore-radio-app/commits -> HEAD 2533bcc",
+        "manifest ref == live HEAD 2533bcc",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-radio"
       ],
       "conditions": [],
-      "head": "de8e4f811dc905866be3bdc5fe21ba7cf24741cc",
+      "head": "2533bcc62223b95a611c9c3bb48fcd9990bd2f2b",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:42.582237+00:00"
+      "locked_at": "2026-11-13T18:08:54.423087+00:00"
     },
     {
       "dapp": "ore-reclaim",
       "repo": "raaru-studios/ore-reclaim-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-reclaim-app/commits -> HEAD 5d5af34",
-        "manifest ref == live HEAD 5d5af34",
+        "gh api repos/raaru-studios/ore-reclaim-app/commits -> HEAD a493730",
+        "manifest ref == live HEAD a493730",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-reclaim"
       ],
       "conditions": [],
-      "head": "5d5af343b11aa12dac363fa68a510a3c9d6dcd6f",
+      "head": "a493730bf536d413935760972f613607046f1c23",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:46.677747+00:00"
+      "locked_at": "2026-11-13T18:08:54.423097+00:00"
     },
     {
       "dapp": "ore-scout",
       "repo": "raaru-studios/ore-scout-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-scout-app/commits -> HEAD 0296d7a",
-        "manifest ref == live HEAD 0296d7a",
+        "gh api repos/raaru-studios/ore-scout-app/commits -> HEAD 9960643",
+        "manifest ref == live HEAD 9960643",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-scout"
       ],
       "conditions": [],
-      "head": "0296d7ad4fa7de644feb89a6b7441db7582a522f",
+      "head": "9960643e7532dedd766043c20fadc9a2590a3d01",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:46.772506+00:00"
+      "locked_at": "2026-11-13T18:08:54.423115+00:00"
     },
     {
       "dapp": "ore-season",
       "repo": "raaru-studios/ore-season-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-season-app/commits -> HEAD c515ac1",
-        "manifest ref == live HEAD c515ac1",
+        "gh api repos/raaru-studios/ore-season-app/commits -> HEAD 53ce36b",
+        "manifest ref == live HEAD 53ce36b",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-season"
       ],
       "conditions": [],
-      "head": "c515ac1612ec29bd1c84cb2a023f237140b19cdb",
+      "head": "53ce36bb55dad56d083a918d8b3d757caf850d25",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:46.772563+00:00"
+      "locked_at": "2026-11-13T18:08:54.423124+00:00"
     },
     {
       "dapp": "ore-seat",
       "repo": "raaru-studios/ore-seat-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-seat-app/commits -> HEAD 4693d06",
-        "manifest ref == live HEAD 4693d06",
+        "gh api repos/raaru-studios/ore-seat-app/commits -> HEAD cd042da",
+        "manifest ref == live HEAD cd042da",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-seat"
       ],
       "conditions": [],
-      "head": "4693d0672fa3ef14fb982bf768dc43f1d3f19468",
+      "head": "cd042dacf7ccbb4dcf3552c714482d321b62e685",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:50.334930+00:00"
+      "locked_at": "2026-11-13T18:08:54.771229+00:00"
     },
     {
       "dapp": "ore-vault",
       "repo": "raaru-studios/ore-vault-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-vault-app/commits -> HEAD 1d9f7c5",
-        "manifest ref == live HEAD 1d9f7c5",
+        "gh api repos/raaru-studios/ore-vault-app/commits -> HEAD 94e1756",
+        "manifest ref == live HEAD 94e1756",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-vault"
       ],
       "conditions": [],
-      "head": "1d9f7c5426970e6eeca4b2ad23f2f799f6cadbf5",
+      "head": "94e17562c9514cfe29d79588d55a9abdf1de53ae",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:52.688645+00:00"
+      "locked_at": "2026-11-13T18:08:54.771288+00:00"
     },
     {
       "dapp": "ore-watch",
       "repo": "raaru-studios/ore-watch-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (no keystore-fail throw in android-app/app/build.gradle.kts \u2014 release builds stay unsigned silently; add the estate-standard GradleException throw naming KEYSTORE_FILE (see VOIDRUNNER app/build.gradle.kts))",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
       "proof": [
-        "gh api repos/raaru-studios/ore-watch-app/commits -> HEAD ab37ef2",
-        "manifest ref == live HEAD ab37ef2",
+        "gh api repos/raaru-studios/ore-watch-app/commits -> HEAD 6b8263c",
+        "manifest ref == live HEAD 6b8263c",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-watch"
       ],
       "conditions": [],
-      "head": "ab37ef243eee331139dc90e659bc7943af9fd14a",
+      "head": "6b8263c2d0d7d543b419cfa88e0267c42c9ad271",
       "verified": "cached",
-      "locked_at": "2026-11-12T21:27:52.688681+00:00"
+      "locked_at": "2026-11-13T18:08:54.771307+00:00"
     },
     {
       "dapp": "foil-tavern",
