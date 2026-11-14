@@ -155,6 +155,11 @@ def main():
     ap.add_argument("--manifest", action="append", default=[],
                     help="manifest to check key coverage against "
                          "(repeatable; coverage is a warning at render)")
+    ap.add_argument("--manifest-file", default=None,
+                    help="MANIFEST_FILE the box fetches from KIT_SOURCE "
+                         "(default: the template's manifest.yaml — pass "
+                         "the repo filename for a non-default manifest, "
+                         "e.g. voidrunner-only.yaml or a run manifest)")
     ap.add_argument("--out", default=None,
                     help="output payload path (REQUIRED unless "
                          "--check-only). Must be OUTSIDE the kit dir.")
@@ -274,6 +279,9 @@ def main():
     if args.campaign:
         text = replace_once(text, 'CAMPAIGN="${CAMPAIGN:-camp-1}"',
                             f"CAMPAIGN={shquote(args.campaign)}", "CAMPAIGN")
+    if args.manifest_file:
+        text = replace_once(text, 'MANIFEST_FILE="${MANIFEST_FILE:-manifest.yaml}"',
+                            f"MANIFEST_FILE={shquote(args.manifest_file)}", "MANIFEST_FILE")
     if args.smoke:
         text = replace_once(text, 'SMOKE="${SMOKE:-0}"', 'SMOKE="1"', "SMOKE")
         if 'DEPLOY_KEYS_BUNDLE=""' not in text:

@@ -39,7 +39,7 @@ import sys
 import tempfile
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import CancelledError, ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -218,6 +218,30 @@ def lint_manifest(m):
     if not jobs or not isinstance(jobs, list):
         errs.append("manifest: no jobs list")
         return errs
+    # Pool reserve (mitigation 5, 2026-11-12): a job may claim the
+    # chain reserve only if it is actually in a chain — a §11a gate
+    # job, or a leg of a multi-leg lane (the lane is the chain unit
+    # in this codebase: the BUILD->EMULATE sibling dependency is
+    # lane-scoped, and the §11a chain is the gate sequence). A job
+    # alone in its lane has no chain to be part of, so a lone job
+    # marked chain:true is a farm job claiming reserve it cannot
+    # use; lint refuses it. NOTE on the narrower alternative: a
+    # BUILD<->EMULATE-pair-only rule gives identical verdicts on the
+    # real draft-camp-1.yaml (every multi-leg lane there is a
+    # BUILD+EMULATE pair, every gate is a gate, and the one
+    # single-job lane — paper-moon, a lone VERIFY — is rejected by
+    # both rules; verified 2026-11-12, see the audit doc); the
+    # lane-membership form is shipped because it is the form whose
+    # admission path is provable end-to-end on a VM without /dev/kvm
+    # (an EMULATE sibling trips the KVM gate, exit 4, before any
+    # job runs, so a pair-only chain job could never reach the
+    # scheduler here).
+    _lane_counts = {}
+    _lane_kinds = {}
+    for _j in jobs:
+        if isinstance(_j, dict) and _j.get("lane"):
+            _lane_counts[_j["lane"]] = _lane_counts.get(_j["lane"], 0) + 1
+            _lane_kinds.setdefault(_j["lane"], set()).add(_j.get("kind"))
     seen_ids = set()
     for j in jobs:
         jid = j.get("id", "<unnamed>")
@@ -247,6 +271,26 @@ def lint_manifest(m):
         if not j.get("produces"):
             errs.append(f"job {jid}: produces is empty — every job must "
                         f"declare its evidence products (SPEC §4)")
+        # Pool reserve markers (mitigation 5, 2026-11-12).
+        if "chain" in j and not isinstance(j["chain"], bool):
+            errs.append(f"job {jid}: chain must be a boolean "
+                        f"(got {j['chain']!r})")
+        if j.get("chain") is True:
+            _in_chain = (bool(j.get("gate")) or
+                         _lane_counts.get(j.get("lane"), 0) >= 2)
+            if not _in_chain:
+                errs.append(
+                    f"job {jid}: chain:true on a farm job — the chain "
+                    f"reserve is only for §11a gate jobs or a leg of "
+                    f"a multi-leg lane (this job is neither: lane "
+                    f"{j.get('lane')!r} holds "
+                    f"{_lane_counts.get(j.get('lane'), 0)} job(s)); a "
+                    f"farm job must not claim the reserve "
+                    f"(mitigation 5)")
+        if "priority" in j and (isinstance(j["priority"], bool)
+                                or not isinstance(j["priority"], int)):
+            errs.append(f"job {jid}: priority must be an integer "
+                        f"(lower = sooner; got {j['priority']!r})")
         # Secrets, by key name anywhere in the job mapping…
         for key in j:
             if SECRET_KEY_RE.search(str(key)):
@@ -541,9 +585,30 @@ class Campaign:
             "relaunches": 0,
             "heartbeat_errors": 0,
             "lock_gate": None,
+            "manifest_sha256": None,
+            "manifest_resume": "fresh",
+            "pool": {"reserve": dict(CHAIN_RESERVE), "refusals": [],
+                     "paused": []},
             "jobs": {},
         }
         self._load_or_init_state()
+        # Manifest hash for resume-never-repins (harvest audit,
+        # mitigation 12, 2026-11-12): hash of the manifest-as-run
+        # copy main() just wrote (scrubbed; deterministic, so the
+        # same manifest re-hashes identically). main() compares it
+        # against the prior bundle's recorded hash before any job
+        # runs and refuses a resume whose manifest differs.
+        self.manifest_sha256 = None
+        try:
+            self.manifest_sha256 = hashlib.sha256(
+                (self.out / "manifest.yaml").read_bytes()).hexdigest()
+        except OSError:
+            pass
+        self.state["manifest_sha256"] = self.manifest_sha256
+        if self.args.resume:
+            self.state["manifest_resume"] = (
+                "hash-recorded" if self.prior_manifest_sha256 else
+                "unverifiable-pre-fix-bundle")
         # Remaining wall for THIS box: the tighter of the per-box cap
         # (less time already spent on this box) and the campaign-total
         # cost deadline (less everything already billed). A resume that
@@ -628,10 +693,18 @@ class Campaign:
             except Exception:
                 prior = {}
         resets = 0
+        # Resume-never-repins (harvest audit, mitigation 12,
+        # 2026-11-12): the prior bundle's manifest hash, for main()
+        # to compare against the manifest being resumed with. None
+        # for pre-fix bundles (no hash was recorded) and for fresh
+        # runs — main() records that as unverifiable, never as a pass.
+        self.prior_manifest_sha256 = prior_top.get("manifest_sha256")
+        self.resumed_from_prior = bool(prior_top)
         for j in self.m["jobs"]:
             jid = j["id"]
             old = prior.get(jid, {})
             status = old.get("state", "PENDING")
+            demote_note = None
             if status == "RUNNING":
                 status = "INTERRUPTED"  # was mid-flight when the box died
             if status == "INTERRUPTED" or (
@@ -639,16 +712,36 @@ class Campaign:
             ):
                 status = "PENDING"
                 resets += 1
+            elif status == "DONE" and self.args.resume and prior_top:
+                # A resume trusts the prior state.json's DONE — but
+                # the evidence may not have survived the pull: a box
+                # reclaimed between a job finishing and the next
+                # 10-min pull leaves DONE in state.json with no
+                # evidence on disk, and the EMULATE sibling would
+                # then wait 90 min for an APK that will never
+                # arrive. A DONE without its evidence is not a DONE:
+                # demote to PENDING so the job re-runs and
+                # re-harvests. (Harvest audit, mitigation 12.)
+                ev = self.out / "jobs" / jid / "evidence"
+                if not (ev.is_dir()
+                        and any(p.is_file() for p in ev.rglob("*"))):
+                    status = "PENDING"
+                    resets += 1
+                    demote_note = ("evidence missing in resumed "
+                                   "bundle (state said DONE) — "
+                                   "re-running to re-harvest")
             self.state["jobs"][jid] = {
                 "state": status,
                 "kind": j["kind"],
                 "lane": j.get("lane"),
+                "chain": bool(j.get("chain")),
                 "attempts": old.get("attempts", 0),
                 "exit_code": old.get("exit_code"),
                 "started_at": old.get("started_at"),
                 "ended_at": old.get("ended_at"),
                 "duration_s": old.get("duration_s"),
-                "note": old.get("note"),
+                "note": (demote_note if demote_note is not None
+                         else old.get("note")),
                 "failure_class": old.get("failure_class"),
             }
         # §9 relaunch cap: a resume that picks up interrupted work counts
@@ -1523,6 +1616,158 @@ def m01_check(manifest, keys_dir, report_path):
 
 
 # --------------------------------------------------------------------------
+# Pool reserve + preemption (mitigation 5, 2026-11-12).
+#
+# The box is m8i.12xlarge: 48 vCPU / 192 GB (SPEC §3, §9.1). The chain
+# reserve is one third of the box: 16 vCPU + 64 GB. The orchestrator
+# cannot reserve cores or RAM directly — it reserves WORKER SLOTS in
+# the per-kind ThreadPoolExecutor pools, one slot per job, as the
+# mechanism the code actually controls:
+#   reserve(kind) = round(pool(kind) / 3)
+#   BUILD   round(10/3) = 3   EMULATE round(8/3) = 3   VERIFY round(4/3) = 1
+# Resource cross-check against SPEC §5 sizes (BUILD daemon + test
+# forks ~6-8 GB, ~4.8 vCPU share of 48/10; EMULATE AVD 2-4 vCPU +
+# 6-8 GB): 3 BUILD ~= 14 vCPU / ~21 GB, 3 EMULATE ~= 9 vCPU /
+# ~21 GB. Both kinds saturated at once would be ~23 vCPU / ~42 GB
+# — inside the 64 GB envelope but OVER the 16-vCPU envelope — so the
+# 16-core figure is a sizing target, not a simultaneously-enforced
+# hard cap: the enforced mechanism is slot counts. A true hard cap
+# would need cgroups on the box; that is NOT built here (recorded
+# gap, harvest-audit doc 2026-11-12).
+#
+# Admission rule (enforced in main()'s scheduler, below):
+#   - chain jobs (chain:true, or §11a gate jobs) are admitted first
+#     and may use any slot up to the pool size;
+#   - farm jobs may always use up to (pool - reserve) slots, and may
+#     use reserved slots ONLY when no chain job of that kind is
+#     queued (PENDING) — otherwise they are refused for this tick,
+#     recorded in state.json pool.refusals, and retried by the
+#     scheduler (exit path unchanged: a deferred job still runs
+#     once the chain drains, or ends PENDING on abort/deadline
+#     exactly as an unsubmitted job did before).
+#
+# Preemption — what is honestly implementable:
+#   - ThreadPoolExecutor CANNOT preempt a running thread. A farm job
+#     already RUNNING is never killed mid-run for a chain job (the
+#     only kill in this codebase is the §9 cost/deadline trip,
+#     which is an abort, not a pause, and is not repurposed here).
+#   - What CAN be preempted is a farm job SUBMITTED but NOT YET
+#     STARTED: concurrent.futures.Future.cancel() removes it from
+#     the pool queue (True iff it had not started). pause_queued_
+#     farm() does exactly that, marks the job PAUSED in state.json,
+#     and the scheduler re-queues it for later re-submission. If no
+#     queued farm future exists (pool full of RUNNING farm jobs),
+#     the chain job waits for the next scheduler tick — that wait
+#     is the recorded limitation, not a silent queue-jump.
+# --------------------------------------------------------------------------
+CHAIN_RESERVE = {"BUILD": 3, "EMULATE": 3, "VERIFY": 1}
+
+
+class PoolAdmission:
+    """Slot-level admission control for the per-kind worker pools."""
+
+    def __init__(self, par, reserve, camp):
+        self.par = dict(par)
+        # A reserve larger than its pool would bar farm jobs
+        # entirely (farm cap 0 is legal, negative is not); clamp.
+        self.reserve = {k: min(reserve.get(k, 0), self.par[k])
+                        for k in self.par}
+        self.camp = camp
+        self._lock = threading.Lock()
+        self._fut_job = {}  # future -> (kind, jid, is_chain)
+        self._refused = set()  # jids refused in this pending episode
+
+    def _active_locked(self, kind):
+        live = [(f, v) for f, v in self._fut_job.items()
+                if v[0] == kind and not f.done()]
+        for f, _v in list(self._fut_job.items()):
+            if f.done():
+                self._fut_job.pop(f, None)
+        return len(live)
+
+    def _chain_pending_locked(self, kind):
+        # PENDING chain jobs of this kind, read from state.json's
+        # own per-job records (chain flag recorded at resume/load).
+        # A chain job already SUBMITTED (live future in _fut_job)
+        # does not count: its worker thread marks it RUNNING a
+        # moment after submit, and counting that window as "queued"
+        # would refuse farm jobs for a whole scheduler tick after
+        # every chain submission (observed in the 2026-11-12 dry
+        # run: farm-a1 refused at tick 1 although a slot was free).
+        submitted = {v[1] for v in self._fut_job.values()}
+        return sum(
+            1 for jid, js in self.camp.state["jobs"].items()
+            if jid not in submitted
+            and js.get("state") == "PENDING" and js.get("chain")
+            and js.get("kind") == kind)
+
+    def admit(self, kind, is_chain):
+        """True iff a job of this kind/chain-ness may take a slot now."""
+        with self._lock:
+            active = self._active_locked(kind)
+            if is_chain:
+                return active < self.par[kind]
+            if active < self.par[kind] - self.reserve[kind]:
+                return True
+            if (self._chain_pending_locked(kind) == 0
+                    and active < self.par[kind]):
+                return True
+            return False
+
+    def note_submit(self, kind, fut, jid, is_chain):
+        with self._lock:
+            self._fut_job[fut] = (kind, jid, is_chain)
+            self._refused.discard(jid)
+
+    def refuse(self, job, kind, reason):
+        """Record one farm-job refusal in state.json (first refusal
+        per pending episode only — the scheduler retries every 10s
+        and must not spam the bundle)."""
+        jid = job["id"]
+        with self._lock:
+            if jid in self._refused:
+                return
+            self._refused.add(jid)
+        rec = {"job": jid, "kind": kind, "reason": reason,
+               "at": Campaign._ts()}
+        with self.camp.lock:
+            self.camp.state["pool"]["refusals"].append(rec)
+            self.camp.state["jobs"][jid]["note"] = (
+                f"POOL REFUSED: {reason} — deferred, retried by the "
+                f"scheduler (mitigation 5)")
+        self.camp.save_state()
+
+    def pause_queued_farm(self, kind):
+        """Preempt farm jobs of this kind that are submitted but not
+        yet started: cancel their futures, mark them PAUSED in
+        state.json, and return their ids for re-queueing. Running
+        jobs are never touched (cannot be — see the module note
+        above); a future that started between the check and the
+        cancel simply fails to cancel and is left alone."""
+        with self._lock:
+            cands = [(fut, jid) for fut, (k, jid, chain)
+                     in list(self._fut_job.items())
+                     if k == kind and not chain
+                     and not fut.done() and not fut.running()]
+        paused = []
+        for fut, jid in cands:
+            if fut.cancel():
+                paused.append(jid)
+                with self._lock:
+                    self._fut_job.pop(fut, None)
+        for jid in paused:
+            with self.camp.lock:
+                self.camp.state["pool"]["paused"].append(
+                    {"job": jid, "kind": kind, "at": Campaign._ts()})
+            self.camp.set_job(
+                jid, state="PAUSED",
+                note=("POOL PAUSE: queued farm job pre-empted for a "
+                      "chain job — re-queued, not killed "
+                      "(mitigation 5)"))
+        return paused
+
+
+# --------------------------------------------------------------------------
 def main(argv=None):
     ap = argparse.ArgumentParser(description="burst-compute orchestrator")
     ap.add_argument("manifest")
@@ -1713,6 +1958,32 @@ def main(argv=None):
         return 2
 
     camp = Campaign(manifest, args.manifest, out_dir, work_dir, args)
+    # Resume-never-repins (harvest audit, mitigation 12, 2026-11-12):
+    # a resume must resume the locked manifest byte-identical. The
+    # hash is of the manifest-as-run copy (scrubbed; deterministic).
+    # Refuse before any state is saved or any job runs. A prior
+    # bundle from before hash recording cannot be proven identical:
+    # proceed with a loud warning, recorded in state.json
+    # (manifest_resume=unverifiable-pre-fix-bundle), never as a pass.
+    if args.resume and camp.resumed_from_prior:
+        if (camp.prior_manifest_sha256 and camp.manifest_sha256
+                and camp.prior_manifest_sha256 != camp.manifest_sha256):
+            print(f"MANIFEST CHANGED ON RESUME: the manifest given "
+                  f"({args.manifest}) hashes "
+                  f"{camp.manifest_sha256[:12]} but the bundle being "
+                  f"resumed was run with "
+                  f"{camp.prior_manifest_sha256[:12]} — a resume "
+                  f"re-pins nothing and resumes nothing different; "
+                  f"resume with the manifest as run "
+                  f"({out_dir}/manifest.yaml) or start a fresh "
+                  f"campaign (mitigation 12)", file=sys.stderr)
+            return 2
+        if not camp.prior_manifest_sha256:
+            print(f"[orchestrator] WARNING: prior bundle predates "
+                  f"manifest-hash recording — resume cannot prove "
+                  f"the manifest is byte-identical; proceeding, "
+                  f"recorded as unverifiable-pre-fix-bundle in "
+                  f"state.json", file=sys.stderr)
     if lock_gate_result is not None:
         with camp.lock:
             camp.state["lock_gate"] = lock_gate_result
@@ -1780,7 +2051,8 @@ def main(argv=None):
         camp.save_state()
 
     jobs = sorted(manifest["jobs"], key=lambda j: (
-        0 if j.get("gate") else 1, signal_rank(j)))
+        0 if j.get("gate") else 1,
+        0 if j.get("chain") else 1, signal_rank(j)))
     gate_ids = {j["id"] for j in jobs if j.get("gate")}
 
     def heartbeat():
@@ -1797,6 +2069,10 @@ def main(argv=None):
     par = {"BUILD": args.build_par, "EMULATE": args.emulate_par,
            "VERIFY": args.verify_par}
     pools = {k: ThreadPoolExecutor(max_workers=v) for k, v in par.items()}
+    # Pool reserve (mitigation 5): chain jobs first, farm jobs only
+    # into unreserved / chain-free slots; refused farm jobs are
+    # deferred and retried, never dropped.
+    admission = PoolAdmission(par, CHAIN_RESERVE, camp)
 
     # §11a abort gate: gate jobs run first; any gate failure aborts the
     # push before the expensive waves begin (~$0.50 exposure by design).
@@ -1810,15 +2086,47 @@ def main(argv=None):
             fut.result()
         return futures
 
-    def submit_jobs(job_list):
-        """Submit jobs to their kind pools without waiting (the
-        dependency-aware EMULATE dispatch below waits on its own terms)."""
-        futures = {}
-        for job in job_list:
-            if camp.state["jobs"][job["id"]]["state"] != "PENDING":
-                continue
-            futures[pools[job["kind"]].submit(run_job, camp, job)] = job["id"]
-        return futures
+    def try_submit(job, futures):
+        """Submit one non-gate job through pool admission. Returns the
+        future, or None when the job is refused/deferred this tick
+        (it stays PENDING/PAUSED and the scheduler retries it) or is
+        no longer submittable. Gate jobs bypass this: run_set runs
+        them first, sequentially, before any pool is contended."""
+        jid = job["id"]
+        st = camp.state["jobs"][jid]["state"]
+        if st == "PAUSED":
+            # Re-queueing a pre-empted farm job: back to PENDING so
+            # run_job and the dispatch checks see it as submittable.
+            camp.set_job(jid, state="PENDING", note=None)
+            st = "PENDING"
+        if st != "PENDING":
+            return None
+        kind = job["kind"]
+        chain = bool(job.get("chain")) or jid in gate_ids
+        if not admission.admit(kind, chain):
+            if chain:
+                # A chain job that cannot get a slot tries honest
+                # preemption first: cancel queued (not yet started)
+                # farm futures of this kind, then re-check. Running
+                # farm jobs are never killed; if none was queued the
+                # chain job waits for the next tick (recorded
+                # limitation — see the PoolAdmission module note).
+                paused = admission.pause_queued_farm(kind)
+                if paused:
+                    print(f"[orchestrator] POOL PREEMPT: paused queued "
+                          f"farm job(s) {paused} for chain job {jid}",
+                          file=sys.stderr)
+                if not admission.admit(kind, chain):
+                    return None
+            else:
+                admission.refuse(
+                    job, kind,
+                    "no spare slot: chain jobs queued / reserve held")
+                return None
+        fut = pools[kind].submit(run_job, camp, job)
+        admission.note_submit(kind, fut, jid, chain)
+        futures[fut] = jid
+        return fut
 
     if gate_ids:
         # Gate jobs run SEQUENTIALLY in sorted order (cheapest first:
@@ -1836,56 +2144,72 @@ def main(argv=None):
             camp.aborted = f"abort gate failed: {failed_gates}"
             camp.state["status"] = "ABORTED_GATE"
     if not camp.aborted:
-        # Dependency-aware EMULATE dispatch (competitive audit
-        # 2026-11-11): the old shape submitted all 27 EMULATE jobs at
-        # once, so the first 8 workers parked up to APK_WAIT_S (90 min)
-        # polling for APKs while BUILD was still running — parked
-        # workers cannot serve a battery whose APK is already ready,
-        # and a slow BUILD lane starves its EMULATE slot. Now an
-        # EMULATE job is submitted only when its same-lane BUILD
-        # sibling is DONE (in BUILD-completion order, so the earliest
-        # ready battery runs first), preserving the §11a overlap (a
-        # battery still starts the moment its APK lands) without the
-        # parking. When the BUILD sibling FAILED, the EMULATE job is
-        # marked FAILED at once — no APK will ever arrive, so occupying
-        # a worker for the 90-min wait would burn the window for
-        # nothing. EMULATE jobs with no BUILD sibling (gate jobs
-        # self-build; riders without one) submit immediately, as before.
+        # Dependency-aware dispatch (competitive audit 2026-11-11)
+        # + pool admission (mitigation 5, 2026-11-12), unified: the
+        # old shape submitted all non-EMULATE jobs at once and each
+        # EMULATE job the moment its BUILD sibling landed, with no
+        # admission control — a farm wave could occupy every slot
+        # while a chain job waited. Now every non-gate job goes
+        # through try_submit() each tick (chain first by sort order):
+        # an EMULATE job is still submitted only when its same-lane
+        # BUILD sibling is DONE (in BUILD-completion order, so the
+        # earliest ready battery runs first), preserving the §11a
+        # overlap without the parking; when the BUILD sibling FAILED
+        # the EMULATE job is marked FAILED at once. EMULATE jobs with
+        # no BUILD sibling submit immediately, as before. Refused
+        # farm jobs stay PENDING and are retried every 10s until the
+        # chain drains or the run aborts / hits its deadline.
         non_gate = [j for j in jobs if j["id"] not in gate_ids]
+        by_id = {j["id"]: j for j in non_gate}
         build_by_lane = {j["lane"]: j["id"] for j in non_gate
                          if j["kind"] == "BUILD"}
-        emulate_jobs = [j for j in non_gate if j["kind"] == "EMULATE"]
-        other_jobs = [j for j in non_gate if j["kind"] != "EMULATE"]
-        futures = submit_jobs(other_jobs)
-        pending = list(emulate_jobs)
+        futures = {}
+        pending = list(non_gate)
         while pending or any(not f.done() for f in futures):
             if camp.aborted or camp.deadline_exceeded():
                 break
             still_pending = []
             for job in pending:
-                sibling_id = build_by_lane.get(job["lane"])
-                if sibling_id is None:
-                    futures.update(submit_jobs([job]))
-                    continue
-                sibling = camp.state["jobs"][sibling_id]["state"]
-                if sibling == "DONE":
-                    futures.update(submit_jobs([job]))
-                elif sibling == "FAILED":
-                    camp.set_job(
-                        job["id"], state="FAILED",
-                        ended_at=Campaign._ts(), duration_s=0.0,
-                        exit_code=None,
-                        note=("APP: BUILD sibling "
-                              f"{sibling_id} FAILED — no APK will arrive; "
-                              "EMULATE skipped without occupying a worker"),
-                        failure_class="APP")
-                else:
-                    still_pending.append(job)
+                jid = job["id"]
+                if job["kind"] == "EMULATE":
+                    sibling_id = build_by_lane.get(job["lane"])
+                    if sibling_id is not None:
+                        sibling = camp.state["jobs"][sibling_id]["state"]
+                        if sibling == "FAILED":
+                            camp.set_job(
+                                jid, state="FAILED",
+                                ended_at=Campaign._ts(), duration_s=0.0,
+                                exit_code=None,
+                                note=("APP: BUILD sibling "
+                                      f"{sibling_id} FAILED — no APK will "
+                                      "arrive; EMULATE skipped without "
+                                      "occupying a worker"),
+                                failure_class="APP")
+                            continue
+                        if sibling != "DONE":
+                            still_pending.append(job)
+                            continue
+                if try_submit(job, futures) is None:
+                    if camp.state["jobs"][jid]["state"] in (
+                            "PENDING", "PAUSED"):
+                        still_pending.append(job)
+            # Re-queue farm jobs pre-empted this tick: their futures
+            # were cancelled before starting and their state is
+            # PAUSED; the next tick re-submits them through admission.
+            for fut, jid in list(futures.items()):
+                if fut.cancelled():
+                    del futures[fut]
+                    if camp.state["jobs"][jid]["state"] == "PAUSED":
+                        still_pending.append(by_id[jid])
             pending = still_pending
             if pending:
                 time.sleep(10)
         for fut in futures:
-            fut.result()
+            try:
+                fut.result()
+            except CancelledError:
+                pass  # paused farm job: cancelled before it ran; it
+                # was re-queued above and re-ran (or the run ended)
 
     for pool in pools.values():
         pool.shutdown(wait=True)
