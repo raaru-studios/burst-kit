@@ -219,6 +219,15 @@ def main():
               "manifest repos covered")
         return 0
 
+    # Manifest-scoped key injection (2026-11-13): the box only needs
+    # the keys for the manifest's repos — injecting all 35 keys blows
+    # the EC2 25,600-byte user-data limit (42,130 raw / 56,176 base64).
+    # Filter the bundle to the manifest's repos when --manifest is
+    # given; without --manifest the old all-keys behavior stands.
+    if args.manifest:
+        wanted = {r.replace("/", "-") for r in manifest_repos(args.manifest)}
+        keys = {k: v for k, v in keys.items() if k in wanted}
+
     if not args.out:
         fail("--out is required (the rendered payload path)")
 

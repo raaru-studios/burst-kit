@@ -1,71 +1,16 @@
 #!/usr/bin/env bash
 # user-data.sh — burst-compute first-boot script (SPEC §5, §7, §9.4).
-#
-# Cloud-init user-data for the burst box. Runs ONCE at first boot as
-# root. It does exactly these things, in this order (launch checklist
-# step 5):
-#   0. Arm a 60-minute DEFAULT self-terminate immediately after the
-#      epoch (§0, F-2): the box can never outlive 60 minutes without a
-#      safety, even if the fetch/hash steps below fail. It is re-armed
-#      with the derived value (max_hours − 15 min) once MAX_HOURS is
-#      validated (§2) — the re-arm cancels the default first, so
-#      exactly one shutdown is ever scheduled.
-#   0c. Install the launch-injected deploy-keys bundle (§0c): the
-#      render script (kit/render-user-data.py) injects the 35 per-repo
-#      read-only deploy keys into DEPLOY_KEYS_BUNDLE at launch time;
-#      the hook decodes them into $BURST_HOME/deploy-keys/ (0700,
-#      each key 0600) for the orchestrator's --keys-dir. Fails loudly
-#      on an empty bundle unless SMOKE=1.
-#   1. Fetch bootstrap.sh, orchestrator.py, cold-run-battery.sh, and
-#      (campaign only) the linted manifest + the lock registry
-#      (parallel-lock.json, L-05) from KIT_SOURCE,
-#      machine-to-machine, and verify each file's sha256 against the
-#      hashes recorded at checklist step 0. A hash mismatch aborts
-#      loudly — no launch on unverified kit bytes (SPEC §8.2).
-#      With SMOKE=1 the manifest is NOT fetched and the orchestrator
-#      is NOT started — the smoke fetches no manifest and proves
-#      bootstrap + self-terminate + SSH only (F-3).
-#   2. Re-arm the self-terminate (§9.4) with the derived value:
-#      schedule `shutdown -h now` at derived max_hours MINUS 15
-#      minutes after boot. With
-#      --instance-initiated-shutdown-behavior terminate (checklist
-#      step 4) the shutdown destroys the box. If arming fails, the
-#      script dies LOUDLY — a box with no self-terminate never runs
-#      jobs (VAULT V-R02: this was prose only until this file).
-#   3. Run `bash bootstrap.sh` (KVM gate first, toolchain phases with
-#      retry + fail-closed). A failed phase aborts here — the
-#      orchestrator never starts on a half-built box.
-#   4. On bootstrap success, start the orchestrator detached, passing
-#      --hourly-price AND --box-launch-epoch (VAULT V-R06: the cost
-#      clock starts at box launch, so the bootstrap tax is inside the
-#      cap — the epoch is recorded at the top of this script, before
-#      anything else bills time).
-#
-# OPERATOR FILLS IN BEFORE LAUNCH (checklist step 5): the four
-# REQUIRED variables below. The script FAILS LOUDLY if any is unset
-# or empty — it never guesses a kit location, a price, a runtime, or
-# a hash list. KIT_SOURCE is undesignated until the operator names it
-# (IGNITION N-3, still open): it is a location prefix the box fetches
-# the five files from — http(s)://..., s3://..., or file://... — and
-# the operator records it in the launch record. Do NOT improvise a
-# transport at launch time.
-# The launch payload is produced by kit/render-user-data.py, which
-# fills in the four variables AND injects the deploy-keys bundle from
-# the estate keys dir — do not hand-edit a payload. A hand-edited file
-# has no keys and the §0c hook refuses it (unless SMOKE=1).
-#
-# Exit codes: 0 user-data complete (orchestrator started detached,
-#   or SMOKE=1 proof complete with the orchestrator deliberately not
-#   started).
-#   1 any loud failure above (unset variable, fetch failure, hash
-#     mismatch, self-terminate arming failure, bootstrap failure).
-#   The orchestrator's own exit code is in its log, not this script's.
-#
-# Verification on the box (checklist step 7): bootstrap log ends
-# `bootstrap complete`; `self-terminate.armed` lists the scheduled
-# shutdown; `systemctl list-timers` (or ps) shows the armed timer;
-# orchestrator log exists under $BURST_HOME/logs/.
-
+# Runs ONCE at boot as root: arms the 60-min default self-terminate,
+# installs the launch-injected deploy-keys bundle, fetches the kit
+# (bootstrap.sh, orchestrator.py, cold-run-battery.sh, manifest,
+# parallel-lock.json) from KIT_SOURCE and hash-verifies it, re-arms
+# self-terminate at MAX_HOURS-15m, runs bootstrap.sh (KVM gate first),
+# then starts the orchestrator detached. Fails loudly on any bad step.
+# Payload produced ONLY by kit/render-user-data.py (fills the REQUIRED
+# vars + injects keys); never hand-edit a payload. SMOKE=1 proves
+# bootstrap + self-terminate + SSH only (no manifest, no orchestrator).
+# Full procedure: kit/LAUNCH_CHECKLIST.md. Exit 0 = orchestrator
+# started (or SMOKE proof done); 1 = loud failure above.
 set -euo pipefail
 
 # ------------------------------------------------------------------ fill-ins
@@ -85,12 +30,8 @@ KIT_DIR="${KIT_DIR:-$BURST_HOME/kit}"
 MANIFEST_FILE="${MANIFEST_FILE:-manifest.yaml}"
 LOG="${BURST_USER_DATA_LOG:-/var/log/burst-user-data.log}"
 DEPLOY_KEYS_DIR="${DEPLOY_KEYS_DIR:-$BURST_HOME/deploy-keys}"
-# DEPLOY_KEYS_BUNDLE — newline-separated "<name>:<base64-key>" lines,
-# injected at launch by kit/render-user-data.py from the estate keys
-# dir. This file as committed carries NO key material (empty here);
-# the render script replaces this line in the launch payload ONLY.
-# A rendered payload contains private key bytes: never commit it,
-# never paste it, never put it in the launch record.
+# DEPLOY_KEYS_BUNDLE: '<name>:<base64-key>' lines, injected at launch by the render;
+# the committed file carries NO key material. Rendered payloads are 0600, never committed.
 DEPLOY_KEYS_BUNDLE=""
 
 # ------------------------------------------------------------------ logging
@@ -166,16 +107,8 @@ arm_self_terminate() {
 }
 # self-terminate-arm-end
 
-# ------------------------------------------- install_deploy_keys (function)
-# Write the launch-injected deploy-keys bundle to $DEPLOY_KEYS_DIR
-# (0700, each key 0600) for the orchestrator's --keys-dir (SPEC §8.1).
-# The bundle is DEPLOY_KEYS_BUNDLE, one "<name>:<base64-key>" line per
-# key, injected at launch by kit/render-user-data.py from the estate
-# keys dir — this file as committed carries NO key material.
-# SMOKE=1 skips installation (the smoke never starts the orchestrator).
-# A campaign launch with an empty bundle FAILS LOUDLY: a box that
-# clones private repos with no keys burns the run on 401s, and a
-# silent https fallback would mask the credential failure.
+# Install the injected deploy-keys bundle into $DEPLOY_KEYS_DIR (0700, keys 0600).
+# Fails loudly on an empty bundle unless SMOKE=1; each key must be an OpenSSH key.
 install_deploy_keys() {
   if [ "$SMOKE" = "1" ]; then
     log "SMOKE=1 — no deploy keys installed (orchestrator not started)"
@@ -187,13 +120,7 @@ install_deploy_keys() {
   mkdir -p "$keys_dir" || die "cannot create $keys_dir"
   chmod 0700 "$keys_dir"
   local count=0 name b64
-  # `read` splits on the first ':' only (IFS=:); names contain no ':'
-  # and base64 contains no ':', so the split is exact. The loop is
-  # fed by process substitution (printf '%s', no added newline — a
-  # heredoc would append one and create a phantom empty line).
-  # The `|| [ -n "$name" ]` clause also processes a final line with
-  # no trailing newline, so the render script's trailing newline is
-  # a courtesy, not a correctness dependency.
+# Bundle lines are '<name>:<base64>'; split on the first ':' only.
   while IFS=: read -r name b64 || [ -n "$name" ]; do
     [ -n "$name" ] && [ -n "$b64" ] || die "malformed deploy-keys bundle line (expected <name>:<base64>)"
     case "$name" in *[!a-zA-Z0-9_-]*) die "malformed deploy-keys bundle name: '$name'" ;; esac
@@ -247,12 +174,7 @@ log "derived max_hours=$MAX_HOURS — self-terminate at ${SELF_TERMINATE_MIN}m a
 # SMOKE=1 (see install_deploy_keys above).
 install_deploy_keys
 
-# ---------------------------------------------------------------- 1. fetch
-# Fetch machine-to-machine (SPEC §5 pull model). Supported schemes:
-# http(s):// (curl), s3:// (aws s3 cp — needs the instance profile;
-# without it the fetch fails loudly here, never silently), file://
-# (local copy — testing / a mounted read-only volume). Anything else
-# is refused: the transport is designated, not improvised.
+# 1. Fetch kit files machine-to-machine from KIT_SOURCE (curl / aws s3 cp / cp).
 fetch_one() {
   # Two statements, not one: bash expands every RHS of a single
   # `local` before assigning any of them, so
@@ -288,22 +210,13 @@ fi
 chmod +x "$KIT_DIR/bootstrap.sh" "$KIT_DIR/orchestrator.py" \
   "$KIT_DIR/cold-run-battery.sh"
 
-# ------------------------------------------------------- 1b. hash verify
-# KIT_SHA256S holds sha256sum-format lines ("<sha256>  <filename>")
-# for exactly the files fetched above — five for a campaign (three
-# kit files + manifest + lock registry), three for SMOKE=1 (kit files
-# only, no manifest, no lock registry) — as recorded at checklist step 0.
+# 1b. Verify fetched kit hashes (sha256sum -c); a mismatch aborts loudly.
 printf '%s\n' "$KIT_SHA256S" > "$KIT_DIR/kit.sha256"
 (cd "$KIT_DIR" && sha256sum -c kit.sha256) \
   || die "HASH MISMATCH: a fetched kit file does not match the step-0 hashes — aborting, no launch on unverified kit bytes (SPEC §8.2)"
 log "kit hashes verified (sha256sum -c clean)"
 
-# --------------------------------------------- 2. re-arm self-terminate
-# The 60-minute default was armed at §0 (F-2). Re-arm with the derived
-# value now that MAX_HOURS is validated — arm_self_terminate cancels
-# the default first, so exactly one shutdown is scheduled.
-# (The function lives above §0, between its arm markers — the unit
-# test extracts exactly that block.)
+# 2. Re-arm self-terminate with the derived value (cancels the 60-min default first).
 arm_self_terminate "$SELF_TERMINATE_MIN" "$SELF_TERMINATE_EPOCH"
 
 # ------------------------------------------------------- 3. bootstrap
