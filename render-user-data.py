@@ -319,6 +319,16 @@ def main():
         fail(f"rendered payload failed bash -n (deleted {out}): "
              f"{rc.stderr.strip()}")
 
+    # EC2 user-data raw limit (2026-11-13): the payload must fit in
+    # 16,384 raw bytes (25,600 base64). Fail loudly here, before any
+    # money is spent, rather than at the RunInstances call.
+    _size = out.stat().st_size
+    if _size > 16384:
+        out.unlink(missing_ok=True)
+        fail(f"rendered payload is {_size} bytes — exceeds the EC2 raw "
+             f"user-data limit of 16384 (deleted {out}); trim the "
+             f"template or scope the deploy keys")
+
     digest = hashlib.sha256(text.encode()).hexdigest()
     print(f"rendered: {out}")
     print(f"  sha256: {digest}")
