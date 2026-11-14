@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-11-14T01:35:09.668645+00:00",
-  "generated_at_epoch": 1794620109,
+  "generated_at": "2026-11-14T01:51:32.433328+00:00",
+  "generated_at_epoch": 1794621092,
   "generated_by": "kit/lock-check.py v2",
   "campaign": "camp-1",
   "manifests": [
@@ -9,12 +9,12 @@
   ],
   "head_source": "graphql",
   "cache": {
-    "hits": 35,
-    "misses": 0,
+    "hits": 0,
+    "misses": 35,
     "path": "/home/hatch/workspace/burst-compute/hidden/lock-check-cache.json",
-    "no_cache": false
+    "no_cache": true
   },
-  "code_search_at": "2026-11-14T01:35:06.230861+00:00",
+  "code_search_at": "2026-11-14T01:50:15.383100+00:00",
   "riders": [
     {
       "dapp": "voidrunner",
@@ -42,8 +42,8 @@
       ],
       "conditions": [],
       "head": "7571901182d99ddfa6682537547ecc8fa8984e8e",
-      "verified": "cached",
-      "locked_at": "2026-11-12T21:26:58.736247+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433139+00:00"
     },
     {
       "dapp": "paper-moon",
@@ -71,8 +71,8 @@
       ],
       "conditions": [],
       "head": "8bdefcd9e2d861ec07a731372bfaa8a1f17e0522",
-      "verified": "cached",
-      "locked_at": "2026-11-12T21:26:58.937628+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433159+00:00"
     },
     {
       "dapp": "gaspumpa",
@@ -98,8 +98,8 @@
       ],
       "conditions": [],
       "head": "b792544c6bb5560e45a904f170142419b53c051a",
-      "verified": "cached",
-      "locked_at": "2026-11-12T21:26:58.937670+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433163+00:00"
     },
     {
       "dapp": "haunt",
@@ -125,8 +125,8 @@
       ],
       "conditions": [],
       "head": "9eb45a1455b4ddf70980bdbf392642a7f6f2ea5c",
-      "verified": "cached",
-      "locked_at": "2026-11-12T21:26:59.401048+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433165+00:00"
     },
     {
       "dapp": "clink",
@@ -152,8 +152,8 @@
       ],
       "conditions": [],
       "head": "dea6849caa11b1a78e7a559abbd61dd9930a40ce",
-      "verified": "cached",
-      "locked_at": "2026-11-12T21:26:59.401093+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433167+00:00"
     },
     {
       "dapp": "tithe",
@@ -175,8 +175,7 @@
       ],
       "conditions": [],
       "head": "b33ae5400c24aaba299dbf9772c8407c51e0c6c2",
-      "verified": "cached",
-      "locked_at": "2026-11-12T21:26:59.401106+00:00"
+      "verified": "fresh"
     },
     {
       "dapp": "iris",
@@ -202,8 +201,8 @@
       ],
       "conditions": [],
       "head": "b5b7ef3862a2007750852977ecadc885c87a8ee9",
-      "verified": "cached",
-      "locked_at": "2026-11-12T21:26:59.401116+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433169+00:00"
     },
     {
       "dapp": "time-wizard",
@@ -229,8 +228,8 @@
       ],
       "conditions": [],
       "head": "b7f8fcc139457132682b6b573155040b0b64f98c",
-      "verified": "cached",
-      "locked_at": "2026-11-12T21:26:59.401131+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433171+00:00"
     },
     {
       "dapp": "ore-rescue",
@@ -256,8 +255,8 @@
       ],
       "conditions": [],
       "head": "eab4b2c05a434deef3b2b44d917fbd908774f01a",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:26.449852+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433172+00:00"
     },
     {
       "dapp": "ore-booth",
@@ -283,8 +282,8 @@
       ],
       "conditions": [],
       "head": "c7c49168683e6b9a7e72fee5f5603a397d6f3ae2",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:27.099808+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433174+00:00"
     },
     {
       "dapp": "ore-almanac",
@@ -310,8 +309,8 @@
       ],
       "conditions": [],
       "head": "7f26afde8059811b17d4dd2cf15ff726cf07c638",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:27.099858+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433176+00:00"
     },
     {
       "dapp": "ore-anomaly",
@@ -337,8 +336,8 @@
       ],
       "conditions": [],
       "head": "19c01a28ba77786c8df7fb7f9ce47eaf3e80f667",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:27.174102+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433178+00:00"
     },
     {
       "dapp": "ore-bounty",
@@ -364,8 +363,8 @@
       ],
       "conditions": [],
       "head": "6a47ee2aaa3171a88a48b02f2f4f695b8e30bffd",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:27.174151+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433180+00:00"
     },
     {
       "dapp": "ore-circle",
@@ -391,8 +390,8 @@
       ],
       "conditions": [],
       "head": "56b9dec80a649754f7d70e7098857dc2d0328b4e",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:27.174165+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433182+00:00"
     },
     {
       "dapp": "ore-data",
@@ -418,8 +417,8 @@
       ],
       "conditions": [],
       "head": "a1cbab8cbb1bb1e56cb1880a7653564bd2d98ae1",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:27.174176+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433183+00:00"
     },
     {
       "dapp": "ore-edge",
@@ -445,8 +444,8 @@
       ],
       "conditions": [],
       "head": "7bf73224160ee81db1133913ea522b7c8eb699fe",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:27.174187+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433185+00:00"
     },
     {
       "dapp": "ore-escrow",
@@ -472,8 +471,8 @@
       ],
       "conditions": [],
       "head": "41a1af8490f2767facac74fd1aec58eda8632110",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:27.174198+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433187+00:00"
     },
     {
       "dapp": "ore-fleet",
@@ -499,8 +498,8 @@
       ],
       "conditions": [],
       "head": "5677699edd4663b4e75d1ab3304c00e862902fe3",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:27.174209+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433189+00:00"
     },
     {
       "dapp": "ore-guild",
@@ -526,8 +525,8 @@
       ],
       "conditions": [],
       "head": "f97fb0d48fcd9573407182db99c19074e07e24cb",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:27.174220+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433191+00:00"
     },
     {
       "dapp": "ore-harvest",
@@ -553,8 +552,8 @@
       ],
       "conditions": [],
       "head": "0d220907dbbcb0034192980685dec3275346965c",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:27.174231+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433193+00:00"
     },
     {
       "dapp": "ore-ledger",
@@ -580,8 +579,8 @@
       ],
       "conditions": [],
       "head": "c58e5b6d1f15f0ef919a5bb14992eb5d5b3d9ea9",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:27.174241+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433195+00:00"
     },
     {
       "dapp": "ore-legacy",
@@ -607,8 +606,8 @@
       ],
       "conditions": [],
       "head": "22ad3d063b3470c1d772fdb5425166d3b4e9d470",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:27.174251+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433197+00:00"
     },
     {
       "dapp": "ore-machine",
@@ -634,8 +633,8 @@
       ],
       "conditions": [],
       "head": "d5454f01658cdad438d9973ad1b34ac68868f8ad",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:27.174261+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433198+00:00"
     },
     {
       "dapp": "ore-pay",
@@ -661,8 +660,8 @@
       ],
       "conditions": [],
       "head": "e79c0323bb9a197cebc953bb429e99cebf6bd632",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:27.174272+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433200+00:00"
     },
     {
       "dapp": "ore-pin",
@@ -688,8 +687,8 @@
       ],
       "conditions": [],
       "head": "6249b813fe1db9037149171da73b6a085166f17f",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:51.447354+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433202+00:00"
     },
     {
       "dapp": "ore-pit",
@@ -715,8 +714,8 @@
       ],
       "conditions": [],
       "head": "b7af50d87ba49d51c46ed627e1d22e6f3d7b5ad8",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:51.922817+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433204+00:00"
     },
     {
       "dapp": "ore-pocket",
@@ -742,8 +741,8 @@
       ],
       "conditions": [],
       "head": "cda5b4f493e7cebafaf9b0cffed756462875d0ed",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:54.423034+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433206+00:00"
     },
     {
       "dapp": "ore-print",
@@ -769,8 +768,8 @@
       ],
       "conditions": [],
       "head": "b050307fb4296a7bc0ae31ea98eb01984e973c02",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:54.423075+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433208+00:00"
     },
     {
       "dapp": "ore-radio",
@@ -796,8 +795,8 @@
       ],
       "conditions": [],
       "head": "2533bcc62223b95a611c9c3bb48fcd9990bd2f2b",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:54.423087+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433210+00:00"
     },
     {
       "dapp": "ore-reclaim",
@@ -823,8 +822,8 @@
       ],
       "conditions": [],
       "head": "a493730bf536d413935760972f613607046f1c23",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:54.423097+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433213+00:00"
     },
     {
       "dapp": "ore-scout",
@@ -850,8 +849,8 @@
       ],
       "conditions": [],
       "head": "9960643e7532dedd766043c20fadc9a2590a3d01",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:54.423115+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433216+00:00"
     },
     {
       "dapp": "ore-season",
@@ -877,8 +876,8 @@
       ],
       "conditions": [],
       "head": "53ce36bb55dad56d083a918d8b3d757caf850d25",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:54.423124+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433219+00:00"
     },
     {
       "dapp": "ore-seat",
@@ -904,8 +903,8 @@
       ],
       "conditions": [],
       "head": "cd042dacf7ccbb4dcf3552c714482d321b62e685",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:54.771229+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433315+00:00"
     },
     {
       "dapp": "ore-vault",
@@ -931,8 +930,8 @@
       ],
       "conditions": [],
       "head": "94e17562c9514cfe29d79588d55a9abdf1de53ae",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:54.771288+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433317+00:00"
     },
     {
       "dapp": "ore-watch",
@@ -958,8 +957,8 @@
       ],
       "conditions": [],
       "head": "6b8263c2d0d7d543b419cfa88e0267c42c9ad271",
-      "verified": "cached",
-      "locked_at": "2026-11-13T18:08:54.771307+00:00"
+      "verified": "fresh",
+      "locked_at": "2026-11-14T01:51:32.433319+00:00"
     },
     {
       "dapp": "foil-tavern",
