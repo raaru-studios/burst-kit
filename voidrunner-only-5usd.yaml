@@ -2,6 +2,11 @@
 # Copy of voidrunner-only/draft-voidrunner-only.yaml with ONLY the cap changed
 # ($8 -> $5, Jacob's word 17:08 PST). Same pin 7571901, same 4 jobs, same box.
 # The standing $8 manifest is untouched; this file records this run's $5 cap.
+# 2026-11-15 03:29 PST — R-3 APPROVED (venue + fire word): re-rendered for the
+# 8-vCPU AWS spot box (m7i.2xlarge, us-west-2, Spot, existing 8.0 quota).
+# Box changed m8i.12xlarge -> m7i.2xlarge; max_hours stays 6 (serial run 4-6h);
+# budget_cap_usd stays 5 (orchestrator reads it from here). Emulator legs
+# run SERIALLY on 8 vCPU / 32GB (one emulator needs ~2-4 vCPU + ~4GB).
 # BURST MANIFEST voidrunner-only — DRAFT 2026-11-10 (prep only, no launch).
 # VOIDRUNNER-only push: BUILD + EMULATE + VERIFY for the native rebuild,
 # without waiting on the suite push's prep queue (25 org repos, 50 unpinned
@@ -40,7 +45,7 @@
 # $1.50–$3.00 of box time in the same push's waves).
 campaign: voidrunner-only
 budget_cap_usd: 5  # RUN CAP 2026-11-13 — Jacob's word 17:08 PST ($5 ceiling, tighter than the standing $8); derived max_hours = (5-0.50)/live price
-box: { type: m8i.12xlarge, region: us-west-2, max_hours: 6 }
+box: { type: m7i.2xlarge, region: us-west-2, max_hours: 6 }
 jobs:
   # m01-rail-check — M-01 (2026-11-12): live money-rail re-check + disarm
   # as a manifest VERIFY job. Runs FIRST (gate, priority 0), before the

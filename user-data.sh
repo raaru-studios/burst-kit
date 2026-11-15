@@ -240,6 +240,15 @@ fi
 # (checklist step 9) reads state.json out of the bundle it writes.
 ORCH_LOG="$BURST_HOME/logs/orchestrator.log"
 log "starting orchestrator (campaign=$CAMPAIGN, hourly-price=\$$HOURLY_PRICE_USD/hr, box-launch-epoch=$BOX_LAUNCH_EPOCH)"
+# 8-vCPU serial profile (2026-11-15, R-3 voidrunner-only launch): on the
+# m7i.2xlarge (8 vCPU / 32 GB) the emulator legs run SERIALLY — one
+# emulator needs ~2-4 vCPU + ~4 GB, so EMULATE is capped at 1 slot.
+# camp-1 (48-core) keeps the orchestrator defaults (no flags passed).
+if [ "$CAMPAIGN" = "voidrunner-only" ]; then
+  PAR_FLAGS="--build-par 2 --emulate-par 1 --verify-par 2"
+else
+  PAR_FLAGS=""
+fi
 setsid nohup python3 "$KIT_DIR/orchestrator.py" "$KIT_DIR/$MANIFEST_FILE" \
   --out "$BURST_HOME/results/$CAMPAIGN" \
   --work "$BURST_HOME/work/$CAMPAIGN" \
@@ -247,6 +256,7 @@ setsid nohup python3 "$KIT_DIR/orchestrator.py" "$KIT_DIR/$MANIFEST_FILE" \
   --box-launch-epoch "$BOX_LAUNCH_EPOCH" \
   --keys-dir "$DEPLOY_KEYS_DIR" \
   --lock-registry "$KIT_DIR/parallel-lock.json" \
+  $PAR_FLAGS \
   > "$ORCH_LOG" 2>&1 < /dev/null &
 ORCH_PID=$!
 # A short campaign can FINISH inside this window — a dead PID is
