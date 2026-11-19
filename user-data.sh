@@ -272,19 +272,26 @@ ORCH_PID=$!
 # A short campaign can FINISH inside this window — a dead PID is
 # success when the log carries the campaign completion line, and
 # failure only when it carries neither a live process nor that line.
+# The completion line prints the MANIFEST's campaign field
+# ("campaign <name>: <status> — ..."), which nothing ties to this
+# script's $CAMPAIGN variable — matching on $CAMPAIGN would call a
+# fast, successful campaign dead whenever the two diverge. Match the
+# line's shape instead: the log was truncated by the redirect above
+# when the orchestrator started, so any completion-shaped line in it
+# is this run's.
 for _ in $(seq 1 10); do
   if kill -0 "$ORCH_PID" 2>/dev/null; then
     log "orchestrator started (pid $ORCH_PID, log $ORCH_LOG)"
     break
   fi
-  if grep -qF "campaign $CAMPAIGN:" "$ORCH_LOG" 2>/dev/null; then
+  if grep -qE "^campaign [^[:space:]]+: " "$ORCH_LOG" 2>/dev/null; then
     log "orchestrator already finished (fast campaign — completion line in $ORCH_LOG)"
     break
   fi
   sleep 1
 done
 if ! kill -0 "$ORCH_PID" 2>/dev/null \
-    && ! grep -qF "campaign $CAMPAIGN:" "$ORCH_LOG" 2>/dev/null; then
+    && ! grep -qE "^campaign [^[:space:]]+: " "$ORCH_LOG" 2>/dev/null; then
   die "orchestrator exited immediately (pid $ORCH_PID) without a campaign completion line — see $ORCH_LOG"
 fi
 log "user-data complete — box is running the campaign; self-terminate armed at ${SELF_TERMINATE_MIN}m"
