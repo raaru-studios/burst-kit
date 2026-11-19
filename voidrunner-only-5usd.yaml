@@ -60,7 +60,7 @@ jobs:
     priority: 0
     repo: raaruofficial/voidrunner
     ref: 7571901182d99ddfa6682537547ecc8fa8984e8e
-    run: python3 "$BURST_KIT_DIR/orchestrator.py" --m01-check --manifest "$BURST_MANIFEST" --keys-dir "$BURST_KEYS_DIR" --report m01-rail-check.json
+    run: python3 "$BURST_KIT_DIR/orchestrator.py" --m01-check "$BURST_MANIFEST" --keys-dir "$BURST_KEYS_DIR" --report m01-rail-check.json
     timeout_min: 10
     produces: [m01-rail-check.json]
     custody: none
