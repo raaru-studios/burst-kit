@@ -84,6 +84,11 @@ jobs:
   # build.gradle.kts carries NO applicationIdSuffix, so there is no
   # .debug suffix (verified 2026-11-11 firsthand from the pushed tree);
   # the battery auto-detects the package from the gradle file.
+  # Coverage scope (P-5a, ruled 2026-11-19): P2/P3 connect attempts are
+  # UNRUN for VOIDRUNNER by construction (no 'Connect wallet' node
+  # exists; the .skr flow is 3 taps + a server challenge) — this leg
+  # proves cold start, process liveness, FATAL-free render, and the
+  # offline first screen. It is NOT .skr sign-in coverage.
   - id: voidrunner-l3
     lane: voidrunner
     kind: EMULATE
