@@ -195,7 +195,7 @@ phase_base() {
       sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
         git curl unzip zip jq python3 python3-yaml \
         openjdk-17-jdk-headless \
-        build-essential pkg-config libssl-dev
+        build-essential pkg-config libssl-dev || return $?
   fi
   java -version 2>&1 | head -1
 }
@@ -215,9 +215,9 @@ phase_sdk() {
     # bypassed.
     printf '%s  %s\n' "$CMDLINE_TOOLS_SHA256" "$tmp/tools.zip" | sha256sum -c - \
       || { log "SDK HASH MISMATCH: $CMDLINE_TOOLS_ZIP does not match CMDLINE_TOOLS_SHA256 — aborting, no launch on unverified SDK bytes"; rm -rf "$tmp"; return 1; }
-    unzip -q "$tmp/tools.zip" -d "$tmp"
+    unzip -q "$tmp/tools.zip" -d "$tmp" || return $?
     rm -rf "$ANDROID_HOME/cmdline-tools/latest"
-    mv "$tmp/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+    mv "$tmp/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest" || return $?
     rm -rf "$tmp"
   fi
   local sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
@@ -249,9 +249,14 @@ phase_rust() {
       cargo install --git https://github.com/coral-xyz/anchor avm --locked --force || return $?
     retry 3 "avm install $ANCHOR_VERSION" \
       "$HOME/.cargo/bin/avm" install "$ANCHOR_VERSION" || return $?
-    "$HOME/.cargo/bin/avm" use "$ANCHOR_VERSION"
+    "$HOME/.cargo/bin/avm" use "$ANCHOR_VERSION" || return $?
   fi
-  anchor --version || true
+  # Fail-closed, like every other step in this phase: this used to be
+  # `|| true`, so a broken Anchor install still touched the
+  # rust-anchor .done marker and the orchestrator's bootstrap gate
+  # (which trusts the markers) admitted the campaign onto a box whose
+  # Crown VERIFY toolchain did not work.
+  anchor --version || return $?
 }
 
 # Separated so retry() can invoke it as a single command (a bare
