@@ -937,6 +937,20 @@ def job_env():
     handed to a job process, whatever the operator shell carried (§8)."""
     env = {k: v for k, v in os.environ.items()
            if not SECRET_ENV_RE.search(k)}
+    # HOME: cloud-init user-data runs without HOME, so a payload rendered
+    # from a pre-fix template (or a hand-started orchestrator) hands
+    # every job a HOME-less environment — and git-ssh (known_hosts for
+    # StrictHostKeyChecking=accept-new), the Gradle wrapper, cargo and
+    # avdmanager all dereference $HOME. Default it from the account's
+    # passwd entry, never a guessed path. user-data.sh and bootstrap.sh
+    # carry the same default upstream; this is the last net, at the
+    # exact point the job environment is built.
+    if not env.get("HOME"):
+        try:
+            import pwd
+            env["HOME"] = pwd.getpwuid(os.getuid()).pw_dir
+        except Exception:
+            env["HOME"] = "/root"
     env.setdefault("GRADLE_USER_HOME",
                    os.path.join(os.environ.get("BURST_HOME", "/opt/burst"),
                                 "gradle-home"))
@@ -944,6 +958,24 @@ def job_env():
                    os.path.join(os.environ.get("BURST_HOME", "/opt/burst"),
                                 "android-sdk"))
     env["ANDROID_SDK_ROOT"] = env["ANDROID_HOME"]
+    # PATH: job commands call bare tool names — the cold-run battery's
+    # every device step is a bare `adb`, and gradlew shells out to SDK
+    # tools — but nothing on the box puts the SDK on PATH: bootstrap
+    # installs platform-tools under ANDROID_HOME without linking it,
+    # and boot-avd.sh's PATH export dies with its own process. Prepend
+    # the SDK tool dirs here, where every job (and the boot-avd
+    # subprocess, which receives this env) inherits them. Without this,
+    # the first successful BUILD is followed by an EMULATE leg failing
+    # on `adb: command not found` — a path the 2026-11-19 campaign
+    # never reached because its BUILD leg failed first.
+    sdk_path = os.pathsep.join([
+        os.path.join(env["ANDROID_HOME"], "platform-tools"),
+        os.path.join(env["ANDROID_HOME"], "emulator"),
+        os.path.join(env["ANDROID_HOME"], "cmdline-tools", "latest",
+                     "bin"),
+    ])
+    env["PATH"] = sdk_path + (os.pathsep + env["PATH"]
+                              if env.get("PATH") else "")
     env["CI"] = "true"
     return env
 
