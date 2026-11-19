@@ -163,7 +163,7 @@ arm_self_terminate 60 $((BOX_LAUNCH_EPOCH + 3600))
 [ -n "$KIT_SOURCE" ]       || die "KIT_SOURCE is unset — the kit source is undesignated (IGNITION N-3): name the read-only location the box fetches bootstrap.sh, orchestrator.py, cold-run-battery.sh, the manifest, and parallel-lock.json from, and record it in the launch record. No launch without it."
 [ -n "$HOURLY_PRICE_USD" ] || die "HOURLY_PRICE_USD is unset — pass the live \$/hr from the pre-flight print (checklist step 2). No launch without it."
 [ -n "$MAX_HOURS" ]        || die "MAX_HOURS is unset — pass the derived max_hours from the pre-flight print (checklist step 2: min(6, (cap - \$0.50) / live price)). No launch without it."
-[ -n "$KIT_SHA256S" ]      || die "KIT_SHA256S is unset — pass the sha256sum-format lines for the kit files, recorded at checklist step 0 (five lines for a campaign, three for SMOKE=1 — the smoke fetches no manifest and no lock registry). No launch on unverified kit bytes (SPEC §8.2)."
+[ -n "$KIT_SHA256S" ]      || die "KIT_SHA256S is unset — pass the sha256sum-format lines for the kit files, recorded at checklist step 0 (six lines for a campaign, four for SMOKE=1 — the smoke fetches no manifest and no lock registry). No launch on unverified kit bytes (SPEC §8.2)."
 case "$MAX_HOURS" in
   ''|*[!0-9.]*)
     die "MAX_HOURS='$MAX_HOURS' is not a number — pass the derived max_hours (checklist step 2)." ;;
@@ -210,6 +210,7 @@ fetch_one() {
 fetch_one bootstrap.sh
 fetch_one orchestrator.py
 fetch_one cold-run-battery.sh
+fetch_one boot-avd.sh
 if [ "$SMOKE" = "1" ]; then
   log "SMOKE=1 — no manifest fetch (the smoke fetches no manifest, F-3)"
 else
@@ -217,7 +218,7 @@ else
   fetch_one parallel-lock.json
 fi
 chmod +x "$KIT_DIR/bootstrap.sh" "$KIT_DIR/orchestrator.py" \
-  "$KIT_DIR/cold-run-battery.sh"
+  "$KIT_DIR/cold-run-battery.sh" "$KIT_DIR/boot-avd.sh"
 
 # 1b. Verify fetched kit hashes (sha256sum -c); a mismatch aborts loudly.
 printf '%s\n' "$KIT_SHA256S" > "$KIT_DIR/kit.sha256"

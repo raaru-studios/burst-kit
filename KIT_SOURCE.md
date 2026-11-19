@@ -24,6 +24,7 @@ GitHub credential (SPEC §8.1), never from this repo.
 - `bootstrap.sh`
 - `orchestrator.py`
 - `cold-run-battery.sh`
+- `boot-avd.sh`
 - `manifest.yaml` (the campaign manifest; `MANIFEST_FILE` overrides)
 - `parallel-lock.json` (the lock registry, L-05 2026-11-12 — fresh
   <1h at dispatch, published to this repo at launch-checklist step 0)
@@ -58,6 +59,7 @@ KIT_SOURCE=https://raw.githubusercontent.com/raaru-studios/burst-kit/main
 curl -fsSL "$KIT_SOURCE/bootstrap.sh" -o "$KIT_DIR/bootstrap.sh"
 curl -fsSL "$KIT_SOURCE/orchestrator.py" -o "$KIT_DIR/orchestrator.py"
 curl -fsSL "$KIT_SOURCE/cold-run-battery.sh" -o "$KIT_DIR/cold-run-battery.sh"
+curl -fsSL "$KIT_SOURCE/boot-avd.sh" -o "$KIT_DIR/boot-avd.sh"
 curl -fsSL "$KIT_SOURCE/manifest.yaml" -o "$KIT_DIR/manifest.yaml"
 curl -fsSL "$KIT_SOURCE/parallel-lock.json" -o "$KIT_DIR/parallel-lock.json"
 ```

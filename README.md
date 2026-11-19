@@ -10,6 +10,9 @@ step 0 before running anything (SPEC §8.2):
 - `bootstrap.sh` — toolchain bootstrap (KVM gate first, fail-closed)
 - `orchestrator.py` — campaign runner (lint, cost trip, abort gate)
 - `cold-run-battery.sh` — estate cold-run battery
+- `boot-avd.sh` — per-job emulator provisioning (the orchestrator
+  boots one AVD per EMULATE job through it; without it on the box no
+  emulator is ever booted)
 - `manifest.yaml` — the campaign manifest for the launch
 
 Also in this repo (not fetched by user-data.sh): `user-data.sh` itself
@@ -33,7 +36,7 @@ set `MANIFEST_FILE` when that campaign fires).
 ## Fetch model
 
 `KIT_SOURCE=https://raw.githubusercontent.com/raaru-studios/burst-kit/main`
-— the box runs `curl -fsSL "$KIT_SOURCE/<file>"` for each of the four
+— the box runs `curl -fsSL "$KIT_SOURCE/<file>"` for each of the five
 files above. Any other transport must be designated by the operator
 before launch; user-data.sh refuses an undesignated or unsupported
 scheme loudly.

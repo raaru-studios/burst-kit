@@ -49,15 +49,16 @@ the verification read-back is what matters, not the shell it ran in.
       UNLOCKED on a curable item, records the honest state — the
       dispatch gate refuses on it, see below). Copy the fresh
       `parallel-lock.json` into the burst-kit checkout, commit + push
-      `[skip ci]`, and record its sha256 as the FIFTH KIT_SHA256S line
+      `[skip ci]`, and record its sha256 as the SIXTH KIT_SHA256S line
       (below). The registry must be <1h old at dispatch — the
       orchestrator refuses a stale one (exit 2). The registry is the
       dispatch gate's first net; its second net is a parallel
       `git ls-remote` spot check of every manifest repo on the box.
-- [ ] **Kit hashes recorded (FIVE files, not four):** `sha256sum
+- [ ] **Kit hashes recorded (SIX files, not five):** `sha256sum
       kit/bootstrap.sh kit/orchestrator.py kit/cold-run-battery.sh
+      kit/boot-avd.sh
       <the linted manifest, e.g. draft-camp-1.yaml>
-      <the fresh lock registry, parallel-lock.json>` — write all five
+      <the fresh lock registry, parallel-lock.json>` — write all six
       here: ____________ (the box re-verifies them after fetch, SPEC
       §8.2). **Security note (2026-11-11 audit):** this step previously
       listed only the three kit files. `user-data.sh` requires
