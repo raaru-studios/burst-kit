@@ -63,7 +63,7 @@ jobs:
     kind: EMULATE
     repo: raaruofficial/voidrunner
     ref: c1d923e63030287a7e8b223dc1b09bfd9b0226f4
-    run: APK="$BURST_OUT/jobs/voidrunner-l1l2/evidence/*.apk/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=voidrunner-l1l2 ./cold-run-battery.sh
+    run: APK="$BURST_OUT/jobs/voidrunner-l1l2/evidence/*.apk/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=2700 APK_WAIT_BUILD_ID=voidrunner-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report, logcat.txt]
     custody: none

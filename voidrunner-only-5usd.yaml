@@ -14,7 +14,7 @@
 # box, cap, ceiling, job shapes). Price ceiling $1.25/h is an orchestrator
 # flag (--price-ceiling, default 1.25), not a manifest field.
 #
-# PIN: raaruofficial/voidrunner @ 7571901182d99ddfa6682537547ecc8fa8984e8e
+# PIN: raaruofficial/voidrunner @ c0db3d1b73b30e2e640c58345c6449f1d50529b9
 #   (B-4 cure, pushed 2026-11-12 ~00:44 PST, [skip ci];
 #   35 Kotlin files, 0 WebView, MWA 2.0.8 pinned, identity
 #   https://voidrunner.raaru.app, favicon.ico live at the custom domain.)
@@ -59,7 +59,7 @@ jobs:
     gate: true
     priority: 0
     repo: raaruofficial/voidrunner
-    ref: 7571901182d99ddfa6682537547ecc8fa8984e8e
+    ref: c0db3d1b73b30e2e640c58345c6449f1d50529b9
     run: python3 "$BURST_KIT_DIR/orchestrator.py" --m01-check "$BURST_MANIFEST" --keys-dir "$BURST_KEYS_DIR" --report m01-rail-check.json
     timeout_min: 10
     produces: [m01-rail-check.json]
@@ -71,7 +71,7 @@ jobs:
     lane: voidrunner
     kind: BUILD
     repo: raaruofficial/voidrunner
-    ref: 7571901182d99ddfa6682537547ecc8fa8984e8e
+    ref: c0db3d1b73b30e2e640c58345c6449f1d50529b9
     run: ./gradlew assembleDebug
     timeout_min: 40
     produces: ["*.apk"]
@@ -88,10 +88,10 @@ jobs:
     lane: voidrunner
     kind: EMULATE
     repo: raaruofficial/voidrunner
-    ref: 7571901182d99ddfa6682537547ecc8fa8984e8e
-    run: APK="$BURST_OUT/jobs/voidrunner-l1l2/evidence/*.apk/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=5400 APK_WAIT_BUILD_ID=voidrunner-l1l2 ./cold-run-battery.sh
+    ref: c0db3d1b73b30e2e640c58345c6449f1d50529b9
+    run: APK="$BURST_OUT/jobs/voidrunner-l1l2/evidence/*.apk/app/build/outputs/apk/debug/*.apk" APK_WAIT_S=2700 APK_WAIT_BUILD_ID=voidrunner-l1l2 ./cold-run-battery.sh
     timeout_min: 150
-    produces: [cold-run-report, logcat.txt]
+    produces: [cold-run-report.txt, logcat.txt]
     custody: none
   # voidrunner-verify — VERIFY: source-truth gate, self-contained (no APK
   # needed, no ordering dependency on the BUILD leg). Passes only when the
@@ -106,8 +106,8 @@ jobs:
     lane: voidrunner
     kind: VERIFY
     repo: raaruofficial/voidrunner
-    ref: 7571901182d99ddfa6682537547ecc8fa8984e8e
-    run: '! grep -rq "android.webkit" app/src/main/java/ && grep -q "mobile-wallet-adapter" app/build.gradle.kts && grep -Eq "voidrunner.raaru.app|raaruofficial.github.io/voidrunner" app/src/main/java/com/voidrunner/app/wallet/WalletManager.kt && echo VOIDRUNNER-VERIFY-OK > verify-report.txt'
+    ref: c0db3d1b73b30e2e640c58345c6449f1d50529b9
+    run: '! grep -rq "android.webkit" app/src/main/java/ && grep -q "com.solanamobile:mobile-wallet-adapter-clientlib-ktx:2.0.8" app/build.gradle.kts && grep -Eq "voidrunner.raaru.app|raaruofficial.github.io/voidrunner" app/src/main/java/com/voidrunner/app/wallet/WalletManager.kt && echo VOIDRUNNER-VERIFY-OK > verify-report.txt'
     timeout_min: 15
     produces: [verify-report.txt]
     custody: none
