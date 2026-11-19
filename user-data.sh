@@ -1,22 +1,17 @@
 #!/usr/bin/env bash
 # user-data.sh — burst-compute first-boot script (SPEC §5, §7, §9.4).
-# Runs ONCE at boot as root: arms the 60-min default self-terminate,
-# installs the launch-injected deploy-keys bundle, fetches the kit
-# (bootstrap.sh, orchestrator.py, cold-run-battery.sh, manifest,
-# parallel-lock.json) from KIT_SOURCE and hash-verifies it, re-arms
-# self-terminate at MAX_HOURS-15m, runs bootstrap.sh (KVM gate first),
-# then starts the orchestrator detached. Fails loudly on any bad step.
-# Payload produced ONLY by kit/render-user-data.py (fills the REQUIRED
-# vars + injects keys); never hand-edit a payload. SMOKE=1 proves
-# bootstrap + self-terminate + SSH only (no manifest, no orchestrator).
-# Full procedure: kit/LAUNCH_CHECKLIST.md. Exit 0 = orchestrator
-# started (or SMOKE proof done); 1 = loud failure above.
+# Runs ONCE at boot as root: arms self-terminate, installs the
+# deploy-keys bundle, fetches + hash-verifies the kit, re-arms
+# self-terminate, runs bootstrap.sh, starts the orchestrator detached.
+# Fails loudly on any bad step. Payload produced ONLY by
+# kit/render-user-data.py; never hand-edit a payload. SMOKE=1 proves
+# bootstrap + self-terminate + SSH only. Full procedure:
+# kit/LAUNCH_CHECKLIST.md. Exit 0 = orchestrator started (or SMOKE
+# proof done); 1 = loud failure above.
 set -euo pipefail
 
 # ------------------------------------------------------------------ fill-ins
-# REQUIRED — the operator fills these in before launch. Empty defaults
-# are deliberate: an unfilled variable must fail loudly below, never
-# silently take a guessed value.
+# REQUIRED — filled by the render; empty defaults fail loudly below.
 KIT_SOURCE="${KIT_SOURCE:-}"
 HOURLY_PRICE_USD="${HOURLY_PRICE_USD:-}"
 MAX_HOURS="${MAX_HOURS:-}"
@@ -34,13 +29,9 @@ DEPLOY_KEYS_DIR="${DEPLOY_KEYS_DIR:-$BURST_HOME/deploy-keys}"
 # the committed file carries NO key material. Rendered payloads are 0600, never committed.
 DEPLOY_KEYS_BUNDLE=""
 
-# cloud-init runs user-data without HOME in the environment. Bootstrap,
-# the orchestrator, and every job process inherit this environment,
-# and the toolchain dereferences $HOME (bootstrap.sh under `set -u`,
-# rustup/cargo, git-ssh known_hosts, Gradle, avdmanager) — the missing
-# variable was fatal to bootstrap on the 2026-11-19 launch. Default
-# it once, here, and export it so every child carries it. bootstrap.sh
-# and orchestrator job_env() default it again for standalone runs.
+# cloud-init runs user-data without HOME; the toolchain dereferences
+# $HOME and its absence was fatal on the 2026-11-19 launch. Default it
+# here and export it so every child carries it.
 export HOME="${HOME:-/root}"
 
 # ------------------------------------------------------------------ logging
@@ -147,9 +138,8 @@ install_deploy_keys() {
 }
 
 # ------------------------------------------------------------------ 0. epoch
-# Recorded FIRST, before any fetch or install bills time: this is the
-# cost clock's start (V-R06). Everything the box does from here on is
-# inside the cap because the clock already runs.
+# Recorded FIRST, before any fetch or install bills time: this is
+# the cost clock's start (V-R06).
 BOX_LAUNCH_EPOCH="$(date +%s)"
 log "box launch epoch: $BOX_LAUNCH_EPOCH ($(date -u -d "@$BOX_LAUNCH_EPOCH" +%Y-%m-%dT%H:%M:%SZ))"
 
