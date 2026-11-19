@@ -221,7 +221,26 @@ phase_sdk() {
     rm -rf "$tmp"
   fi
   local sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-  yes | "$sdkmanager" --licenses >/dev/null 2>&1 || true
+  # License acceptance must be non-interactive AND proven (D5 audit
+  # 2026-11-19): `yes` answers every prompt, but the old form piped the
+  # output to /dev/null and swallowed the rc with `|| true`, so the
+  # phase could touch its .done marker with no license ever accepted —
+  # the failure then surfaced later, mislabelled, as an sdkmanager
+  # --install or AGP auto-download error inside a job. Capture the log,
+  # check sdkmanager's own rc via PIPESTATUS (the pipeline's rc is
+  # `yes`'s SIGPIPE death under pipefail, which is why the swallow was
+  # there), and verify license files actually landed on disk.
+  yes | "$sdkmanager" --licenses >"$LOG_DIR/sdk-licenses.log" 2>&1
+  local lic_rc=${PIPESTATUS[1]}
+  if [ "$lic_rc" -ne 0 ]; then
+    log "SDK license acceptance FAILED (sdkmanager rc=$lic_rc) — see $LOG_DIR/sdk-licenses.log"
+    return 1
+  fi
+  if [ ! -d "$ANDROID_HOME/licenses" ] || [ -z "$(ls -A "$ANDROID_HOME/licenses" 2>/dev/null)" ]; then
+    log "SDK license acceptance wrote no license files under $ANDROID_HOME/licenses — treating as FAILED"
+    return 1
+  fi
+  log "SDK licenses accepted (files in $ANDROID_HOME/licenses; log: $LOG_DIR/sdk-licenses.log)"
   retry 3 "sdkmanager --install" "$sdkmanager" --install "${SDK_PACKAGES[@]}" || return $?
   # Emulator KVM functional check, now that the emulator exists.
   if [ "$REQUIRE_KVM" = "1" ]; then
