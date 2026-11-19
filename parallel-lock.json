@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-11-19T20:55:09.453019+00:00",
-  "generated_at_epoch": 1795121709,
+  "generated_at": "2026-11-19T22:02:16.960620+00:00",
+  "generated_at_epoch": 1795125736,
   "generated_by": "kit/lock-check.py v2",
   "campaign": "camp-1",
   "manifests": [
@@ -14,7 +14,7 @@
     "path": "/home/hatch/workspace/burst-compute/hidden/lock-check-cache.json",
     "no_cache": true
   },
-  "code_search_at": "2026-11-19T20:53:55.799809+00:00",
+  "code_search_at": "2026-11-19T22:00:49.862804+00:00",
   "riders": [
     {
       "dapp": "voidrunner",
@@ -43,7 +43,7 @@
       "conditions": [],
       "head": "c0db3d1b73b30e2e640c58345c6449f1d50529b9",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452930+00:00"
+      "locked_at": "2026-11-19T22:02:16.960497+00:00"
     },
     {
       "dapp": "paper-moon",
@@ -72,7 +72,7 @@
       "conditions": [],
       "head": "8bdefcd9e2d861ec07a731372bfaa8a1f17e0522",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452949+00:00"
+      "locked_at": "2026-11-19T22:02:16.960516+00:00"
     },
     {
       "dapp": "gaspumpa",
@@ -99,7 +99,7 @@
       "conditions": [],
       "head": "b792544c6bb5560e45a904f170142419b53c051a",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452953+00:00"
+      "locked_at": "2026-11-19T22:02:16.960520+00:00"
     },
     {
       "dapp": "haunt",
@@ -126,7 +126,7 @@
       "conditions": [],
       "head": "9eb45a1455b4ddf70980bdbf392642a7f6f2ea5c",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452956+00:00"
+      "locked_at": "2026-11-19T22:02:16.960524+00:00"
     },
     {
       "dapp": "clink",
@@ -153,7 +153,7 @@
       "conditions": [],
       "head": "dea6849caa11b1a78e7a559abbd61dd9930a40ce",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452959+00:00"
+      "locked_at": "2026-11-19T22:02:16.960527+00:00"
     },
     {
       "dapp": "tithe",
@@ -202,7 +202,7 @@
       "conditions": [],
       "head": "b5b7ef3862a2007750852977ecadc885c87a8ee9",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452961+00:00"
+      "locked_at": "2026-11-19T22:02:16.960531+00:00"
     },
     {
       "dapp": "time-wizard",
@@ -229,7 +229,7 @@
       "conditions": [],
       "head": "b7f8fcc139457132682b6b573155040b0b64f98c",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452963+00:00"
+      "locked_at": "2026-11-19T22:02:16.960533+00:00"
     },
     {
       "dapp": "ore-rescue",
@@ -256,7 +256,7 @@
       "conditions": [],
       "head": "eab4b2c05a434deef3b2b44d917fbd908774f01a",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452965+00:00"
+      "locked_at": "2026-11-19T22:02:16.960536+00:00"
     },
     {
       "dapp": "ore-booth",
@@ -283,7 +283,7 @@
       "conditions": [],
       "head": "c7c49168683e6b9a7e72fee5f5603a397d6f3ae2",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452967+00:00"
+      "locked_at": "2026-11-19T22:02:16.960539+00:00"
     },
     {
       "dapp": "ore-almanac",
@@ -310,7 +310,7 @@
       "conditions": [],
       "head": "7f26afde8059811b17d4dd2cf15ff726cf07c638",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452969+00:00"
+      "locked_at": "2026-11-19T22:02:16.960542+00:00"
     },
     {
       "dapp": "ore-anomaly",
@@ -337,7 +337,7 @@
       "conditions": [],
       "head": "19c01a28ba77786c8df7fb7f9ce47eaf3e80f667",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452970+00:00"
+      "locked_at": "2026-11-19T22:02:16.960545+00:00"
     },
     {
       "dapp": "ore-bounty",
@@ -364,7 +364,7 @@
       "conditions": [],
       "head": "6a47ee2aaa3171a88a48b02f2f4f695b8e30bffd",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452972+00:00"
+      "locked_at": "2026-11-19T22:02:16.960548+00:00"
     },
     {
       "dapp": "ore-circle",
@@ -391,7 +391,7 @@
       "conditions": [],
       "head": "56b9dec80a649754f7d70e7098857dc2d0328b4e",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452974+00:00"
+      "locked_at": "2026-11-19T22:02:16.960551+00:00"
     },
     {
       "dapp": "ore-data",
@@ -418,7 +418,7 @@
       "conditions": [],
       "head": "a1cbab8cbb1bb1e56cb1880a7653564bd2d98ae1",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452976+00:00"
+      "locked_at": "2026-11-19T22:02:16.960554+00:00"
     },
     {
       "dapp": "ore-edge",
@@ -445,7 +445,7 @@
       "conditions": [],
       "head": "7bf73224160ee81db1133913ea522b7c8eb699fe",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452978+00:00"
+      "locked_at": "2026-11-19T22:02:16.960557+00:00"
     },
     {
       "dapp": "ore-escrow",
@@ -472,7 +472,7 @@
       "conditions": [],
       "head": "41a1af8490f2767facac74fd1aec58eda8632110",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452979+00:00"
+      "locked_at": "2026-11-19T22:02:16.960559+00:00"
     },
     {
       "dapp": "ore-fleet",
@@ -499,7 +499,7 @@
       "conditions": [],
       "head": "5677699edd4663b4e75d1ab3304c00e862902fe3",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452981+00:00"
+      "locked_at": "2026-11-19T22:02:16.960562+00:00"
     },
     {
       "dapp": "ore-guild",
@@ -526,7 +526,7 @@
       "conditions": [],
       "head": "f97fb0d48fcd9573407182db99c19074e07e24cb",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452983+00:00"
+      "locked_at": "2026-11-19T22:02:16.960565+00:00"
     },
     {
       "dapp": "ore-harvest",
@@ -553,7 +553,7 @@
       "conditions": [],
       "head": "0d220907dbbcb0034192980685dec3275346965c",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452985+00:00"
+      "locked_at": "2026-11-19T22:02:16.960568+00:00"
     },
     {
       "dapp": "ore-ledger",
@@ -580,7 +580,7 @@
       "conditions": [],
       "head": "c58e5b6d1f15f0ef919a5bb14992eb5d5b3d9ea9",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452986+00:00"
+      "locked_at": "2026-11-19T22:02:16.960571+00:00"
     },
     {
       "dapp": "ore-legacy",
@@ -607,18 +607,18 @@
       "conditions": [],
       "head": "22ad3d063b3470c1d772fdb5425166d3b4e9d470",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452988+00:00"
+      "locked_at": "2026-11-19T22:02:16.960574+00:00"
     },
     {
       "dapp": "ore-machine",
       "repo": "raaru-studios/ore-machine-app",
-      "state": "UNLOCKED",
+      "state": "LOCKED",
       "blocking_items": {
         "A-1": "PASS",
         "A-4": "PASS",
         "B-1": "PASS",
         "C-1": "PASS",
-        "B-4": "FAIL (cannot read android-app/app/build.gradle.kts live from the pushed repo)",
+        "B-4": "PASS",
         "F-1": "PASS",
         "E-1": "PASS"
       },
@@ -627,12 +627,14 @@
         "manifest ref == live HEAD d5454f0",
         "android-app/gradlew exists in repo tree",
         "cold-run-battery.sh exists in repo tree",
+        "android-app/app/build.gradle.kts throws GradleException naming KEYSTORE_FILE",
         "org code search: no addJavascriptInterface / @JavascriptInterface in .kt/.java",
         "audit report security-ore-lanes.md exists and names ore-machine"
       ],
       "conditions": [],
       "head": "d5454f01658cdad438d9973ad1b34ac68868f8ad",
-      "verified": "fresh"
+      "verified": "fresh",
+      "locked_at": "2026-11-19T22:02:16.960576+00:00"
     },
     {
       "dapp": "ore-pay",
@@ -659,7 +661,7 @@
       "conditions": [],
       "head": "e79c0323bb9a197cebc953bb429e99cebf6bd632",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452990+00:00"
+      "locked_at": "2026-11-19T22:02:16.960579+00:00"
     },
     {
       "dapp": "ore-pin",
@@ -686,7 +688,7 @@
       "conditions": [],
       "head": "6249b813fe1db9037149171da73b6a085166f17f",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452992+00:00"
+      "locked_at": "2026-11-19T22:02:16.960582+00:00"
     },
     {
       "dapp": "ore-pit",
@@ -713,7 +715,7 @@
       "conditions": [],
       "head": "b7af50d87ba49d51c46ed627e1d22e6f3d7b5ad8",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452994+00:00"
+      "locked_at": "2026-11-19T22:02:16.960584+00:00"
     },
     {
       "dapp": "ore-pocket",
@@ -740,7 +742,7 @@
       "conditions": [],
       "head": "cda5b4f493e7cebafaf9b0cffed756462875d0ed",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452995+00:00"
+      "locked_at": "2026-11-19T22:02:16.960587+00:00"
     },
     {
       "dapp": "ore-print",
@@ -767,7 +769,7 @@
       "conditions": [],
       "head": "b050307fb4296a7bc0ae31ea98eb01984e973c02",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452997+00:00"
+      "locked_at": "2026-11-19T22:02:16.960590+00:00"
     },
     {
       "dapp": "ore-radio",
@@ -794,7 +796,7 @@
       "conditions": [],
       "head": "2533bcc62223b95a611c9c3bb48fcd9990bd2f2b",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.452999+00:00"
+      "locked_at": "2026-11-19T22:02:16.960592+00:00"
     },
     {
       "dapp": "ore-reclaim",
@@ -821,7 +823,7 @@
       "conditions": [],
       "head": "a493730bf536d413935760972f613607046f1c23",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.453000+00:00"
+      "locked_at": "2026-11-19T22:02:16.960595+00:00"
     },
     {
       "dapp": "ore-scout",
@@ -848,7 +850,7 @@
       "conditions": [],
       "head": "9960643e7532dedd766043c20fadc9a2590a3d01",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.453002+00:00"
+      "locked_at": "2026-11-19T22:02:16.960597+00:00"
     },
     {
       "dapp": "ore-season",
@@ -875,7 +877,7 @@
       "conditions": [],
       "head": "53ce36bb55dad56d083a918d8b3d757caf850d25",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.453004+00:00"
+      "locked_at": "2026-11-19T22:02:16.960600+00:00"
     },
     {
       "dapp": "ore-seat",
@@ -902,7 +904,7 @@
       "conditions": [],
       "head": "cd042dacf7ccbb4dcf3552c714482d321b62e685",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.453006+00:00"
+      "locked_at": "2026-11-19T22:02:16.960603+00:00"
     },
     {
       "dapp": "ore-vault",
@@ -929,7 +931,7 @@
       "conditions": [],
       "head": "94e17562c9514cfe29d79588d55a9abdf1de53ae",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.453007+00:00"
+      "locked_at": "2026-11-19T22:02:16.960605+00:00"
     },
     {
       "dapp": "ore-watch",
@@ -956,7 +958,7 @@
       "conditions": [],
       "head": "6b8263c2d0d7d543b419cfa88e0267c42c9ad271",
       "verified": "fresh",
-      "locked_at": "2026-11-19T20:55:09.453009+00:00"
+      "locked_at": "2026-11-19T22:02:16.960608+00:00"
     },
     {
       "dapp": "foil-tavern",
