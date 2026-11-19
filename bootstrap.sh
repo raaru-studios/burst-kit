@@ -32,6 +32,18 @@
 
 set -uo pipefail
 
+# cloud-init user-data runs without HOME in the environment, and this
+# script dereferences $HOME under `set -u` in the rust-anchor phase
+# ($HOME/.cargo/...) — the 2026-11-19 launch died there with
+# "bootstrap.sh: line 228: HOME: unbound variable" (campaign report,
+# kit bugs). Default it once, here, in the file's own ${VAR:-default}
+# idiom: user-data runs as root, and a standalone re-run of bootstrap
+# (the 2026-11-19 manual resume was one) inherits the same guard.
+# user-data.sh carries the same default for the orchestrator and job
+# processes it starts; orchestrator job_env() defaults it a third
+# time for hand-started runs.
+export HOME="${HOME:-/root}"
+
 BURST_HOME="${BURST_HOME:-/opt/burst}"
 LOG_DIR="$BURST_HOME/logs"
 STATE_DIR="$BURST_HOME/bootstrap-state"

@@ -34,6 +34,15 @@ DEPLOY_KEYS_DIR="${DEPLOY_KEYS_DIR:-$BURST_HOME/deploy-keys}"
 # the committed file carries NO key material. Rendered payloads are 0600, never committed.
 DEPLOY_KEYS_BUNDLE=""
 
+# cloud-init runs user-data without HOME in the environment. Bootstrap,
+# the orchestrator, and every job process inherit this environment,
+# and the toolchain dereferences $HOME (bootstrap.sh under `set -u`,
+# rustup/cargo, git-ssh known_hosts, Gradle, avdmanager) — the missing
+# variable was fatal to bootstrap on the 2026-11-19 launch. Default
+# it once, here, and export it so every child carries it. bootstrap.sh
+# and orchestrator job_env() default it again for standalone runs.
+export HOME="${HOME:-/root}"
+
 # ------------------------------------------------------------------ logging
 mkdir -p "$(dirname "$LOG")" "$BURST_HOME/logs" "$KIT_DIR"
 exec > >(tee -a "$LOG") 2>&1
