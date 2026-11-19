@@ -1,0 +1,129 @@
+# RUN MANIFEST voidrunner-only-release-5usd — RELEASE campaign variant of
+# voidrunner-only-5usd.yaml, staged 2026-11-19 for the first-ever
+# assembleRelease run (Jacob Opt-in 1 given 2026-11-19 14:57 PST; fire
+# waits on Opt-in 2/3). Same box, same $5 cap, same on-demand shape as
+# the 2026-11-19 debug campaign (launch #3, 4/4 DONE, ~$0.09). Only the
+# BUILD leg's product changes: a SIGNED RELEASE APK instead of a debug
+# APK, plus an on-box signer-certificate assertion.
+#
+# PIN: raaruofficial/voidrunner @ fc70dbbb0f39e6c8f7b9bc39f15f8945f6c3ea64
+#   (P-5b battery cure on top of c0db3d1: repo-root cold-run.conf +
+#   battery two-step wallet walk; [skip ci].)
+#   Version at pin: versionCode 14 / versionName "1.1.0" in
+#   app/build.gradle.kts — CONFIRMED by Jacob 2026-11-19 and verified
+#   present at this ref via gh api during staging (no version edit is
+#   part of this run).
+#
+# SIGNING (the release difference): the build's signing config is
+# env-only, with the B-4 GradleException fail-closed throw when the
+# signing environment does not name an existing keystore file. The
+# dedicated VOIDRUNNER release keystore (sha256
+# 420a68ce68f5a6f42edc4bf273950af2d4fab5e9d343d357100fd493496cd9ca;
+# signer cert SHA-256 307f6839...48111 — the v1.0.12 signer) and the
+# four signing values are held in estate custody (signing programme
+# records). NO secret value appears in this manifest, the kit repo, or
+# the launch payload.
+#
+# KIT CUSTODY SHAPE (why BUILD calls a staged wrapper): orchestrator
+# lint (SPEC §8) refuses any job whose run string references signing
+# material, and the job environment is scrubbed of secret-shaped
+# variables — by design, campaign jobs never touch custody material.
+# The signing environment therefore reaches gradle through a wrapper
+# the FIRE COORDINATOR stages on the box before dispatch (pre-BUILD
+# staging step, NOT an orchestrator job):
+#   1. scp the keystore into /opt/burst/signing/ (0700 dir); verify its
+#      on-box sha256 == 420a68ce... BEFORE the campaign starts (hash
+#      gate; a mismatch aborts the launch).
+#   2. scp a generated 0600 signing env file into the same dir,
+#      carrying the four values with the keystore path pointing at the
+#      staged copy. File bytes travel machine-to-machine only, never
+#      as text through any agent message.
+#   3. Place the build wrapper at the path the BUILD job calls: it
+#      re-verifies the staged keystore hash, sources the env file, and
+#      execs ./gradlew assembleRelease from the job's working dir. The
+#      wrapper contains no secret values (paths + the public hash).
+#   4. After harvest/teardown, delete the whole staging dir on-box.
+# If staging is skipped, the wrapper is absent and BUILD fails
+# immediately; if the env is absent at gradle time, the B-4 throw
+# fails the build closed. There is no path to a debug-signed or
+# unsigned "release" from this manifest.
+campaign: voidrunner-only-release
+budget_cap_usd: 5  # RUN CAP — Jacob's word 2026-11-13 ($5 ceiling); orchestrator reads it from here
+box: { type: m7i.2xlarge, region: us-west-2, max_hours: 6 }
+jobs:
+  # m01-rail-check — M-01 (2026-11-12): live money-rail re-check + disarm
+  # as a manifest VERIFY job. Runs FIRST (gate, priority 0), before the
+  # BUILD leg: re-reads the live rail state (VOIDRUNNER's MoneyConfig)
+  # at both HEAD and the manifest pin and verifies the disarm holds.
+  # Fail closed: unreadable state or an armed rail aborts dispatch
+  # (ABORTED_GATE). Identical to the debug manifest's gate, re-pinned.
+  - id: m01-rail-check
+    lane: money-rail
+    kind: VERIFY
+    gate: true
+    priority: 0
+    repo: raaruofficial/voidrunner
+    ref: fc70dbbb0f39e6c8f7b9bc39f15f8945f6c3ea64
+    run: python3 "$BURST_KIT_DIR/orchestrator.py" --m01-check "$BURST_MANIFEST" --keys-dir "$BURST_KEYS_DIR" --report m01-rail-check.json
+    timeout_min: 10
+    produces: [m01-rail-check.json]
+    custody: none
+  # voidrunner-l1l2 — BUILD (RELEASE): assembleRelease with R8 minify +
+  # resource shrink and RELEASE SIGNING — first execution ever. The
+  # staged wrapper (see header) performs the signed build; this job
+  # then runs apksigner on the produced APK and FAILS THE JOB unless
+  # the signer certificate SHA-256 equals the v1.0.12 signer
+  # (307f6839...48111), and records the APK sha256. The signer
+  # assertion lives here, at the point of production, because the
+  # campaign's VERIFY leg is deliberately dependency-free (below);
+  # its outputs (signer-certs.txt, apk-sha256.txt) are harvested as
+  # evidence alongside the APK.
+  - id: voidrunner-l1l2
+    lane: voidrunner
+    kind: BUILD
+    repo: raaruofficial/voidrunner
+    ref: fc70dbbb0f39e6c8f7b9bc39f15f8945f6c3ea64
+    run: '[ -x /opt/burst/signing/run-release-build.sh ] && /opt/burst/signing/run-release-build.sh && APK=$(ls app/build/outputs/apk/release/*.apk | head -n 1) && APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n 1) && "$APKSIGNER" verify --print-certs "$APK" > signer-certs.txt 2>&1 && tr -d " :" < signer-certs.txt | grep -qi 307f683901323dbf38ae7f121b8c92f4c1b6c6c0a62745b8c25e1078b4148111 && sha256sum "$APK" > apk-sha256.txt && cat signer-certs.txt'
+    timeout_min: 40
+    produces: ["*.apk", signer-certs.txt, apk-sha256.txt]
+    custody: none
+  # voidrunner-l3 — EMULATE: estate cold-run battery (cold-run-battery.sh
+  # at repo root in the pinned HEAD) against the BUILD leg's RELEASE
+  # APK, with the §5.1 wait (APK_WAIT_S=2700, fail-fast if BUILD fails).
+  # The release APK's applicationId is com.voidrunner.app (no
+  # applicationIdSuffix anywhere in the build), so the battery's
+  # auto-detection is unchanged from the debug leg.
+  # Coverage scope (P-5b, landed at this pin 2026-11-19): the battery
+  # now carries the repo-root cold-run.conf (CONNECT_TEXT=WALLET) and
+  # the two-step walk (Home WALLET -> WalletScreen SIGN IN WITH .SKR),
+  # so P2/P3 ATTEMPT the connect path and prove the graceful no-wallet
+  # handling and a FATAL-free render, cold and offline. A COMPLETED
+  # .skr sign-in still cannot be proven here — the stock emulator has
+  # no wallet app; that proof is the Seeker device playtest. This leg's
+  # verdict remains an emulator-floor verdict, never a Seeker verdict.
+  - id: voidrunner-l3
+    lane: voidrunner
+    kind: EMULATE
+    repo: raaruofficial/voidrunner
+    ref: fc70dbbb0f39e6c8f7b9bc39f15f8945f6c3ea64
+    run: APK="$BURST_OUT/jobs/voidrunner-l1l2/evidence/*.apk/app/build/outputs/apk/release/*.apk" APK_WAIT_S=2700 APK_WAIT_BUILD_ID=voidrunner-l1l2 ./cold-run-battery.sh
+    timeout_min: 150
+    produces: [cold-run-report.txt, logcat.txt]
+    custody: none
+  # voidrunner-verify — VERIFY: source-truth gate, self-contained (no
+  # APK needed, no ordering dependency on the BUILD leg) — unchanged
+  # from the debug manifest apart from the pin. The release-specific
+  # binary assertions (APK sha256, signer cert) are enforced inside
+  # the BUILD leg and harvested as its evidence; the battery verdicts
+  # are the EMULATE leg's own products. The binary-level listing-truth
+  # audit (LIBRARIAN method) happens back home from the BUILD
+  # evidence, not here.
+  - id: voidrunner-verify
+    lane: voidrunner
+    kind: VERIFY
+    repo: raaruofficial/voidrunner
+    ref: fc70dbbb0f39e6c8f7b9bc39f15f8945f6c3ea64
+    run: '! grep -rq "android.webkit" app/src/main/java/ && grep -q "com.solanamobile:mobile-wallet-adapter-clientlib-ktx:2.0.8" app/build.gradle.kts && grep -Eq "voidrunner.raaru.app|raaruofficial.github.io/voidrunner" app/src/main/java/com/voidrunner/app/wallet/WalletManager.kt && echo VOIDRUNNER-VERIFY-OK > verify-report.txt'
+    timeout_min: 15
+    produces: [verify-report.txt]
+    custody: none
