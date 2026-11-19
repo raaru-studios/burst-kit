@@ -64,11 +64,23 @@ CMDLINE_TOOLS_SHA256="2d2d50857e4eb553af5a6dc3ad507a17adf43d115264b1afc116f95c92
 # pinned, not the catalog hash. If Google re-issues the zip, the hash
 # check below fails loudly and the pin must be re-verified against a
 # fresh download before any launch.
-# Estate pins (SPEC §7): JDK 17 (AGP 8.7.3), platform 35, API 36 image.
+# Estate pins (SPEC §7): JDK 17 (AGP 8.7.3), API 36 image.
+# Platform/build-tools set (D5 audit 2026-11-19): the flown app
+# (voidrunner) compiles against compileSdk 36, and AGP 8.7.3's default
+# buildToolsVersion is 34.0.0 — neither was in this list, so the
+# 2026-11-19 build only succeeded because AGP auto-downloaded
+# platforms;android-36 + build-tools;34.0.0 from dl.google.com at
+# build time (scratch build2 log). Bootstrap must install everything
+# the builds require; a build must never depend on AGP's auto-download
+# fallback (licenses + writable SDK + egress all lining up mid-job).
+# platforms;android-35 + build-tools;35.0.0 stay: AGP 8.7.3 is tested
+# up to compileSdk 35 and the camp-1 suite apps target it.
 SDK_PACKAGES=(
   "platform-tools"
   "platforms;android-35"
+  "platforms;android-36"
   "build-tools;35.0.0"
+  "build-tools;34.0.0"
   "emulator"
   "system-images;android-36;google_apis;x86_64"
 )
