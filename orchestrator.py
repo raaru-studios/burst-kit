@@ -376,6 +376,18 @@ DISK_MIN_FREE_GB = 20
 # bounded and the job fails INFRA (retryable) rather than hanging.
 AVD_BOOT_TIMEOUT_S = 600
 
+# Git transport bounds for the per-job clone/checkout in _run_attempt:
+# those subprocess.run calls run OUTSIDE the job timeout (that clock
+# starts at the job command) and are not registered in live_procs, so
+# the cost/deadline trip cannot kill them — an unbounded clone wedged
+# on a hung network would block its worker thread past the campaign
+# wall and hang the final pool shutdown. The M-01 and lock-gate git
+# calls already carry timeouts (60s / 30s); these close the same hole
+# for the job path. Generous ceilings — estate repos are small — and a
+# timeout classifies exactly like the transport failure it is.
+GIT_CLONE_TIMEOUT_S = 900
+GIT_CHECKOUT_TIMEOUT_S = 300
+
 
 def disk_free_gb(path):
     """Free space in GiB on the filesystem holding path (0.0 when the
@@ -1126,10 +1138,17 @@ def _run_attempt(camp: Campaign, job, attempt, t0):
             # SECURITY: log the redacted URL only — an embedded
             # per-campaign token must never reach the job log.
             emit(f"clone {job['repo']} @ {job['ref']} ({scrub_url(clone_url)})")
-            rc = subprocess.run(
-                ["git", "clone", "--quiet", clone_url, str(repo_dir)],
-                stdout=log, stderr=subprocess.STDOUT,
-                env=clone_env).returncode
+            try:
+                rc = subprocess.run(
+                    ["git", "clone", "--quiet", clone_url, str(repo_dir)],
+                    stdout=log, stderr=subprocess.STDOUT,
+                    env=clone_env,
+                    timeout=GIT_CLONE_TIMEOUT_S).returncode
+            except subprocess.TimeoutExpired:
+                emit(f"clone timed out after {GIT_CLONE_TIMEOUT_S}s")
+                log.flush()
+                scrub_log_file(log_path, clone_url)
+                return fail("clone", None)
             if rc != 0:
                 # SECURITY: git prints the remote URL in its own error
                 # output — scrub any embedded token from the log before
@@ -1137,15 +1156,23 @@ def _run_attempt(camp: Campaign, job, attempt, t0):
                 log.flush()
                 scrub_log_file(log_path, clone_url)
                 return fail("clone", rc)
-            rc = subprocess.run(
-                ["git", "-C", str(repo_dir), "checkout", "--quiet",
-                 str(job["ref"])],
-                stdout=log, stderr=subprocess.STDOUT, env=env).returncode
+            try:
+                rc = subprocess.run(
+                    ["git", "-C", str(repo_dir), "checkout", "--quiet",
+                     str(job["ref"])],
+                    stdout=log, stderr=subprocess.STDOUT, env=env,
+                    timeout=GIT_CHECKOUT_TIMEOUT_S).returncode
+            except subprocess.TimeoutExpired:
+                return fail("checkout", None)
             if rc != 0:
                 return fail("checkout", rc)
-        head = subprocess.run(
-            ["git", "-C", str(repo_dir), "rev-parse", "HEAD"],
-            capture_output=True, text=True, env=env).stdout.strip()
+        try:
+            head = subprocess.run(
+                ["git", "-C", str(repo_dir), "rev-parse", "HEAD"],
+                capture_output=True, text=True, env=env,
+                timeout=60).stdout.strip()
+        except subprocess.TimeoutExpired:
+            return fail("pin")
         if head != str(job["ref"]):
             return fail("pin")
         emit(f"pin verified: HEAD == {head}")
