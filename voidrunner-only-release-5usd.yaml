@@ -6,13 +6,22 @@
 # BUILD leg's product changes: a SIGNED RELEASE APK instead of a debug
 # APK, plus an on-box signer-certificate assertion.
 #
-# PIN: raaruofficial/voidrunner @ fc70dbbb0f39e6c8f7b9bc39f15f8945f6c3ea64
-#   (P-5b battery cure on top of c0db3d1: repo-root cold-run.conf +
-#   battery two-step wallet walk; [skip ci].)
+# PIN: raaruofficial/voidrunner @ f30774d402294e5d06b30108dc34be41b5f5c7b6
+#   RE-PINNED 2026-11-19 (was fc70dbbb): the pre-submission closure
+#   gate returned NOT GATE-CLEAN on the fc70dbbb candidate (6 defects);
+#   this pin is the closure-gate fix pass — c677707c (D-1 KFC-001
+#   single onCreate sender + D-2 KFC-008 combined cure), 4403a3fc
+#   (D-4 paste-fallback deletion + D-6 Locale.ROOT), f30774d4 (D-3
+#   Seraphim money-gate line + D-5 true empty-state copy). Source
+#   census at pin: exactly ONE ActivityResultSender construction, in
+#   MainActivity.onCreate. The rebuild fire re-runs the gate's
+#   re-verification protocol (dex census, battery wallet walk,
+#   mock-wallet abandonment cells, server session matrix). Fix record:
+#   goals/ion-storm-prototype/files/VOIDRUNNER_CLOSURE_FIXES_2026-11-19.md.
 #   Version at pin: versionCode 14 / versionName "1.1.0" in
 #   app/build.gradle.kts — CONFIRMED by Jacob 2026-11-19 and verified
 #   present at this ref via gh api during staging (no version edit is
-#   part of this run).
+#   part of this run; the fix pass touched no version fields).
 #
 # SIGNING (the release difference): the build's signing config is
 # env-only, with the B-4 GradleException fail-closed throw when the
@@ -63,7 +72,7 @@ jobs:
     gate: true
     priority: 0
     repo: raaruofficial/voidrunner
-    ref: fc70dbbb0f39e6c8f7b9bc39f15f8945f6c3ea64
+    ref: f30774d402294e5d06b30108dc34be41b5f5c7b6
     run: python3 "$BURST_KIT_DIR/orchestrator.py" --m01-check "$BURST_MANIFEST" --keys-dir "$BURST_KEYS_DIR" --report m01-rail-check.json
     timeout_min: 10
     produces: [m01-rail-check.json]
@@ -82,7 +91,7 @@ jobs:
     lane: voidrunner
     kind: BUILD
     repo: raaruofficial/voidrunner
-    ref: fc70dbbb0f39e6c8f7b9bc39f15f8945f6c3ea64
+    ref: f30774d402294e5d06b30108dc34be41b5f5c7b6
     run: '[ -x /opt/burst/signing/run-release-build.sh ] && /opt/burst/signing/run-release-build.sh && APK=$(ls app/build/outputs/apk/release/*.apk | head -n 1) && APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n 1) && "$APKSIGNER" verify --print-certs "$APK" > signer-certs.txt 2>&1 && tr -d " :" < signer-certs.txt | grep -qi 307f683901323dbf38ae7f121b8c92f4c1b6c6c0a62745b8c25e1078b4148111 && sha256sum "$APK" > apk-sha256.txt && cat signer-certs.txt'
     timeout_min: 40
     produces: ["*.apk", signer-certs.txt, apk-sha256.txt]
@@ -105,7 +114,7 @@ jobs:
     lane: voidrunner
     kind: EMULATE
     repo: raaruofficial/voidrunner
-    ref: fc70dbbb0f39e6c8f7b9bc39f15f8945f6c3ea64
+    ref: f30774d402294e5d06b30108dc34be41b5f5c7b6
     run: APK="$BURST_OUT/jobs/voidrunner-l1l2/evidence/*.apk/app/build/outputs/apk/release/*.apk" APK_WAIT_S=2700 APK_WAIT_BUILD_ID=voidrunner-l1l2 ./cold-run-battery.sh
     timeout_min: 150
     produces: [cold-run-report.txt, logcat.txt]
@@ -122,7 +131,7 @@ jobs:
     lane: voidrunner
     kind: VERIFY
     repo: raaruofficial/voidrunner
-    ref: fc70dbbb0f39e6c8f7b9bc39f15f8945f6c3ea64
+    ref: f30774d402294e5d06b30108dc34be41b5f5c7b6
     run: '! grep -rq "android.webkit" app/src/main/java/ && grep -q "com.solanamobile:mobile-wallet-adapter-clientlib-ktx:2.0.8" app/build.gradle.kts && grep -Eq "voidrunner.raaru.app|raaruofficial.github.io/voidrunner" app/src/main/java/com/voidrunner/app/wallet/WalletManager.kt && echo VOIDRUNNER-VERIFY-OK > verify-report.txt'
     timeout_min: 15
     produces: [verify-report.txt]
