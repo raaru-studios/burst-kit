@@ -1,0 +1,157 @@
+# BURST MANIFEST — ORE KINGDOM M5 SEAL (single-app campaign, $5 cap).
+# Staged 2026-11-19 under Jacob's 17:51 PST ruling extending the burst
+# venue to Ore Kingdom for its M5 seal. STAGING ONLY — the fire needs
+# its own triple opt-in. Modeled line-for-line on the VOIDRUNNER
+# release campaign that flew 2026-11-19 (722 s, ~$0.08 actual).
+#
+# PIN: raaruofficial/ore-kingdom @ 8a3fddf3c3f3b826a05249dabb72864e33991324
+#   The v0.1.4 adopted-set tree. App sources are byte-identical to the
+#   M4-graded commit ada5567 (graded run 41594961516, all PASS); the
+#   delta on top is build/CI only: the Gradle 8.11 wrapper (e477e16),
+#   the B-4 fail-closed release guard (4650882), and the two burst
+#   driver scripts under android/ci/ (8a3fddf). versionName 0.1.4 /
+#   versionCode 5, applicationId com.raaru.orekingdom. The old v0.1.3
+#   WebView shell at the repo root is NOT built by this campaign and
+#   must never be sealed (500-founder economics).
+#
+# ADOPTED ECONOMICS (verified by direct grep at the pin, staging
+# record ORE_KINGDOM_BURST_STAGING_2026-11-19): member cap 1,000;
+# join 5,000 SKR once; thread $3.50; replies free (reply price
+# RETIRED); pin $250 / 12h, 2 slots; commercial $50; Prestige
+# 10,000 SKR, cap 100; tips $5–$500 + $1 flat fee; founder purchase
+# apparatus ABSENT from the client.
+#
+# HOST_URL: the native client's default is the production host
+# (https://orekingdom.137-184-143-128.sslip.io, baked via
+# defaultConfig) — the sealed build needs NO endpoint override. The
+# rig legs override only their own debug builds (-PHOST_URL) to point
+# at the rig host, exactly as in CI.
+#
+# SIGNING (release seal): the orchestrator lint (SPEC §8) refuses any
+# job string that references signing material and scrubs job env of
+# secret-shaped variables, so signing reaches the build exactly as it
+# did for VOIDRUNNER — through a wrapper the FIRE COORDINATOR stages
+# on the box before the BUILD job runs (the wrapper is NOT an
+# orchestrator job):
+#   (1) scp the orekingdom release keystore into /opt/burst/signing/
+#       (dir 0700) and verify its on-box sha256 equals the custody
+#       anchor ba97c726cec8785d2cb47d2b97ba1450d5cfb165d91bb0f8703404cc91585c81
+#       BEFORE the campaign starts — a mismatch aborts the fire;
+#   (2) scp a generated env file (0600) holding the four signing
+#       values, with the keystore path pointing at the staged copy
+#       and the alias orekingdom;
+#   (3) stage the wrapper at /opt/burst/signing/run-release-build.sh:
+#       it re-verifies the staged hash, sources the env file, and
+#       execs the release build from the checkout root via
+#       `cd android && ../gradlew --no-daemon :app:assembleRelease`
+#       (the v0.1.4 project lives in android/ and builds with the
+#       repo-root Gradle 8.11 wrapper);
+#   (4) after evidence harvest the coordinator deletes the whole
+#       /opt/burst/signing/ directory.
+#   Custody proof (staging, 2026-11-19): the programme password opens
+#   the keystore; signer cert SHA-256
+#   7961f5a23bf07e2a27bff67d19354f104e56f91b9f6bfa9cd06cabedb2d7f0cc
+#   matches the FINGERPRINTS.md anchor and the v0.1.3 seal record —
+#   signer lineage is continuous. The BUILD job additionally asserts
+#   the signer in-job via apksigner and FAILS unless it matches, so a
+#   wrongly signed (or unsigned — the tree's B-4 guard also fails
+#   release tasks closed without signing env) APK can never be sealed
+#   by accident.
+#
+# SEAL LEGS (the M5 seal, ported from the repo's CI gates):
+#   ok-gate-verify  source-truth gate at the pin (version, B-4 guard,
+#                   HOST_URL default, adopted economics, founder
+#                   apparatus absent) — the seal's VERIFY leg.
+#   ok-seal-build   assembleRelease via the staged wrapper + in-job
+#                   signer assertion + APK sha256 (the seal itself).
+#   ok-cold-run     the M4 battery (android/ci/emulator-cold-run.sh)
+#                   in its three graded variants against the SEALED
+#                   release APK on an API 35 AVD — the seal's runtime
+#                   verification (v0.1.3 seal precedent: cold-run on
+#                   the sealed binary).
+#   ok-rig          owed dispatch #1 from the M4 report's December
+#                   path: lane=rig, suite all — the CR-5
+#                   host-consumption re-attempt (the one M4 leg left
+#                   UNPROVEN, blocked twice by mock equipment faults).
+#   ok-rig-control  owed dispatch #2: lane=rig-control — the KFC-008
+#                   discrimination control (cancelled CI run
+#                   41599978605): the cure-neutered build MUST fail
+#                   CR-3 in the predicted hang shape or the cell
+#                   cannot detect the fault.
+#   Rig port notes: the burst driver (android/ci/burst-rig-job.sh in
+#   the pinned tree) mirrors the CI composite action step-for-step;
+#   the mock wallet's throwaway key is generated fresh on-box (the CI
+#   value is a write-only GitHub secret, not held in estate custody;
+#   the key controls nothing outside the rig and dies with the box),
+#   bun 1.4.4 is installed hash-gated, and the API 35 AVD is
+#   self-provisioned (the orchestrator pre-boots the kit's API 36
+#   device, which the OK legs retire — the M4 gates graded on API 35).
+#
+# REGISTRY NOTE: lock-check F-1 (org code search) flags the repo for
+# the SUPERSEDED v0.1.3 shell's JS bridge (app/.../forum/ActionsBridge.kt
+# on main) — the rider therefore reads UNLOCKED [F-1] even though the
+# sealed android/ tree contains no WebView and no bridge. That is a
+# registry-truth caveat for the fire coordinator, not a seal defect;
+# the cure (retiring the shell tree from main) is a separate owner
+# decision. All other rider checks PASS at the pin.
+#
+# Cap $5, box m7i.2xlarge, max_hours 6 — same venue as the VOIDRUNNER
+# release run. Job timeouts sum to 355 min, inside the 6 h box.
+
+campaign: ore-kingdom-seal
+budget_cap_usd: 5
+box: { type: m7i.2xlarge, region: us-west-2, max_hours: 6 }
+jobs:
+  - id: ok-gate-verify
+    repo: raaruofficial/ore-kingdom
+    ref: 8a3fddf3c3f3b826a05249dabb72864e33991324
+    kind: VERIFY
+    lane: ore-kingdom-seal
+    custody: none
+    lane: ore-kingdom-seal
+    run: "{ echo 'ORE KINGDOM SEAL SOURCE GATE — pin 8a3fddf3c3f3b826a05249dabb72864e33991324'; grep -q 'versionName = \"0.1.4\"' android/app/build.gradle.kts && echo 'PASS versionName 0.1.4' || echo 'FAIL versionName'; grep -q 'versionCode = 5' android/app/build.gradle.kts && echo 'PASS versionCode 5' || echo 'FAIL versionCode'; grep -q 'GradleException' android/app/build.gradle.kts && echo 'PASS B-4 release fail-closed throw present' || echo 'FAIL B-4 throw'; grep -q 'orekingdom.137-184-143-128.sslip.io' android/app/build.gradle.kts && echo 'PASS HOST_URL default = production host' || echo 'FAIL HOST_URL default'; grep -q 'OK_MEMBER_CAP ?? 1000' host/staging-v014/server.ts && echo 'PASS member cap 1000' || echo 'FAIL member cap'; grep -q 'OK_JOIN_PRICE_SKR ?? 5000' host/staging-v014/server.ts && echo 'PASS join 5000 SKR once' || echo 'FAIL join price'; grep -q 'OK_POST_PRICE_USD_CENTS_THREAD ?? 350' host/staging-v014/server.ts && echo 'PASS thread fee $3.50' || echo 'FAIL thread fee'; grep -q 'POST_PRICE_REPLY_CENTS.*RETIRED' host/staging-v014/server.ts && echo 'PASS replies free (reply price RETIRED)' || echo 'FAIL replies'; grep -q 'OK_PAID_PIN_CAP ?? 2' host/staging-v014/server.ts && echo 'PASS paid pin cap 2' || echo 'FAIL pin cap'; grep -rq '$250 / 12h' android/app/src && echo 'PASS pin $250 / 12h (client)' || echo 'FAIL pin price'; grep -q 'OK_COMMERCIAL_PRICE_CENTS ?? 5000' host/staging-v014/server.ts && echo 'PASS commercial $50' || echo 'FAIL commercial'; grep -q 'OK_PRESTIGE_PRICE_SKR ?? 10000' host/staging-v014/server.ts && echo 'PASS prestige 10000 SKR' || echo 'FAIL prestige price'; grep -q 'OK_PRESTIGE_CAP ?? 100' host/staging-v014/server.ts && echo 'PASS prestige cap 100' || echo 'FAIL prestige cap'; grep -q 'OK_TIP_MIN_USD_CENTS ?? 500' host/staging-v014/server.ts && echo 'PASS tip min $5' || echo 'FAIL tip min'; grep -q 'OK_TIP_MAX_USD_CENTS ?? 50000' host/staging-v014/server.ts && echo 'PASS tip max $500' || echo 'FAIL tip max'; grep -q 'OK_TIP_FEE_USD_CENTS ?? 100' host/staging-v014/server.ts && echo 'PASS tip fee $1 flat' || echo 'FAIL tip fee'; ! grep -rq 'FOUNDER_PRICE\\|createFounderSession' android/app/src && echo 'PASS founder purchase apparatus absent from client' || echo 'FAIL founder apparatus present'; } > verify-report.txt; cat verify-report.txt; ! grep -q '^FAIL' verify-report.txt"
+    produces: ["verify-report.txt"]
+    timeout_min: 10
+    priority: 0
+  - id: ok-seal-build
+    repo: raaruofficial/ore-kingdom
+    ref: 8a3fddf3c3f3b826a05249dabb72864e33991324
+    kind: BUILD
+    lane: ore-kingdom-seal
+    custody: none
+    run: "test -x /opt/burst/signing/run-release-build.sh || { echo 'SIGNING WRAPPER NOT STAGED — the fire coordinator stages the signing material before this campaign runs (contract in the manifest header); refusing to build unsigned'; exit 1; }; /opt/burst/signing/run-release-build.sh; APK=android/app/build/outputs/apk/release/app-release.apk; test -f \"$APK\" && \"$ANDROID_HOME/build-tools/34.0.0/apksigner\" verify --print-certs \"$APK\" > signer-certs.txt && grep -q '7961f5a23bf07e2a27bff67d19354f104e56f91b9f6bfa9cd06cabedb2d7f0cc' signer-certs.txt && sha256sum \"$APK\" | awk '{print $1}' > apk-sha256.txt && cp \"$APK\" ore-kingdom-release.apk && cat signer-certs.txt && cat apk-sha256.txt"
+    produces: ["ore-kingdom-release.apk", "signer-certs.txt", "apk-sha256.txt"]
+    timeout_min: 45
+    priority: 1
+  - id: ok-cold-run
+    repo: raaruofficial/ore-kingdom
+    ref: 8a3fddf3c3f3b826a05249dabb72864e33991324
+    kind: EMULATE
+    lane: ore-kingdom-seal
+    custody: none
+    env:
+      APK_WAIT_S: "2700"
+    run: "WAIT=\"${APK_WAIT_S:-2700}\"; waited=0; APK=\"\"; while [ -z \"$APK\" ] && [ \"$waited\" -lt \"$WAIT\" ]; do APK=$(ls \"$BURST_OUT\"/jobs/ok-seal-build/evidence/ore-kingdom-release.apk 2>/dev/null | head -1); [ -z \"$APK\" ] && { sleep 60; waited=$((waited+60)); }; done; [ -n \"$APK\" ] || { echo 'seal BUILD evidence APK never appeared — cannot cold-run the sealed binary'; exit 1; }; bash android/ci/burst-cold-run-job.sh \"$APK\""
+    produces: ["cold-run-evidence-online", "cold-run-evidence-nowallet", "cold-run-evidence-offline"]
+    timeout_min: 105
+    priority: 2
+  - id: ok-rig
+    repo: raaruofficial/ore-kingdom
+    ref: 8a3fddf3c3f3b826a05249dabb72864e33991324
+    kind: EMULATE
+    lane: ore-kingdom-seal
+    custody: none
+    run: "bash android/ci/burst-rig-job.sh all pass"
+    produces: ["wallet-rig-evidence-all-api35"]
+    timeout_min: 115
+    priority: 3
+  - id: ok-rig-control
+    repo: raaruofficial/ore-kingdom
+    ref: 8a3fddf3c3f3b826a05249dabb72864e33991324
+    kind: EMULATE
+    lane: ore-kingdom-seal
+    custody: none
+    run: "git apply android/ci/control-neuter.patch && bash android/ci/burst-rig-job.sh ctl fail"
+    produces: ["wallet-rig-evidence-ctl-api35"]
+    timeout_min: 80
+    priority: 4

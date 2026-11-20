@@ -51,6 +51,7 @@ SWEEP = os.path.join(HOME, "workspace", "sweep-2026-11-11")
 DEFAULT_MANIFESTS = [
     os.path.join(BURST, "draft-camp-1.yaml"),
     os.path.join(BURST, "voidrunner-only", "draft-voidrunner-only.yaml"),
+    os.path.join(BURST, "ore-kingdom", "draft-ore-kingdom.yaml"),
 ]
 DEFAULT_OUT = os.path.join(BURST, "parallel-lock.json")
 CACHE_PATH = os.path.join(BURST, "hidden", "lock-check-cache.json")
@@ -129,6 +130,20 @@ RIDERS = {
         "wrapper": "android-app/gradlew",
         "battery": "cold-run-battery.sh",
         "keystore": "android-app/app/build.gradle.kts",
+        "rail": None,
+    },
+    "ore-kingdom": {
+        # The flagship's repo carries TWO products: the superseded
+        # v0.1.3 WebView shell at the root (never shipped again) and
+        # the v0.1.4 native client in android/ (the seal product).
+        # Paths below name the seal product's tree. F-1 still flags
+        # the repo for the dead shell's JS bridge — see the staging
+        # record ORE_KINGDOM_BURST_STAGING_2026-11-19.
+        "repo": "raaruofficial/ore-kingdom",
+        "audit": "security-ore-lanes.md",
+        "wrapper": "gradlew",
+        "battery": "android/ci/emulator-cold-run.sh",
+        "keystore": "android/app/build.gradle.kts",
         "rail": None,
     },
     "ore-rescue": {
