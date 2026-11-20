@@ -1,0 +1,114 @@
+# RUN MANIFEST voidrunner-routea-5usd — ROUTE A campaign variant of
+# voidrunner-only-release-5usd.yaml, staged 2026-11-19 by the re-port
+# build lane (fire waits on its own triple opt-in). Same box, same $5
+# cap, same on-demand shape, same signing custody shape as the release
+# campaign. What changed is the PRODUCT: the game is now the artifact
+# game (VOIDSTORM) bundled byte-for-byte in the proven shell, per the
+# owner's rulings of 2026-11-19 21:42/21:51 PST ("The artifact is the
+# game" / "Approve Route A"). Plan + build record:
+# goals/ion-storm-prototype/files/VOIDRUNNER_FAITHFUL_RE-PORT_PLAN_2026-11-19.md
+# goals/ion-storm-prototype/files/VOIDRUNNER_RE-PORT_BUILD_2026-11-19.md
+#
+# PIN: raaruofficial/voidrunner @ 4b74227305c5c0044bb86c07515e8e4018576022
+#   (main). Lineage: f30774d (closure-gate fix pass, all D-1..D-6 —
+#   the shell this build inherits unchanged) + 08c3e4e (artifact bundle
+#   byte-pinned into assets/game + P-2 census tool) + 4d94606 (Route A
+#   wiring: bundled-game WebView host, data-only adapter, native game
+#   removed from the shipped path) + 3b610ba (PARITY.md + gameplay
+#   battery) + 2494e7a (census --source mode) + 4b74227 (P-4/P-5 sheets). Version at pin:
+#   versionCode 14 / versionName "1.1.0" (unchanged lineage).
+#
+# DELTAS vs the release manifest:
+#   1. BUILD gains the P-2 BUNDLE CENSUS at the point of production:
+#      the just-built APK's assets/game/* must hash-match
+#      tools/bundle-pin.json exactly or the job fails before the
+#      emulator spends a minute. (The 2026-11-19 rebuild shipped a
+#      different game through every gate because no gate compared the
+#      game bytes to the artifact; this is that gate.)
+#   2. EMULATE's battery (repo-root cold-run-battery.sh at the pin)
+#      gains the PG gameplay phase: guest run -> full sector -> draft
+#      (offered upgrade names cross-checked against the repo's
+#      PARITY.md) -> sector 2 -> pause -> abandon to title, with
+#      screenshot frames harvested for the P-4 comparison sheet
+#      (produces gains "*.png").
+#   3. VERIFY is AMENDED for Route A. The old assertion
+#      `! grep -rq "android.webkit"` (no WebView anywhere) is
+#      deliberately retired: the WebView is back as the bundled-game
+#      host — but with no signing path inside it (the v1.0.12
+#      rejection ground). In its place: the source bundle census
+#      (P-2, --source mode), exactly ONE @JavascriptInterface in the
+#      tree (GameBridge, data-only), no wallet/signing surface in the
+#      webgame package, and android.webkit confined to webgame/.
+#   Mock-wallet abandonment cells still CANNOT run in this fire (no
+#   mock-wallet job, APK, or driver exists in the kit) and remain
+#   owed; D-2 stays source-grade until they run.
+#
+# SIGNING: identical custody shape to the release campaign — the
+# coordinator stages /opt/burst/signing/ (keystore hash-gated vs
+# 420a68ce... before campaign start, 0600 env, wrapper), BUILD asserts
+# the signer cert SHA-256 307f6839...48111 in-job, staging wiped after
+# harvest. No secret value appears in this manifest, the kit repo, or
+# the launch payload.
+campaign: voidrunner-routea
+budget_cap_usd: 5  # RUN CAP — Jacob's word 2026-11-13 ($5 ceiling); orchestrator reads it from here
+box: { type: m7i.2xlarge, region: us-west-2, max_hours: 6 }
+jobs:
+  # m01-rail-check — unchanged gate, re-pinned: live money-rail
+  # re-check + disarm verification at HEAD and the manifest pin.
+  # Fail closed: unreadable state or an armed rail aborts dispatch.
+  - id: m01-rail-check
+    lane: money-rail
+    kind: VERIFY
+    gate: true
+    priority: 0
+    repo: raaruofficial/voidrunner
+    ref: 4b74227305c5c0044bb86c07515e8e4018576022
+    run: python3 "$BURST_KIT_DIR/orchestrator.py" --m01-check "$BURST_MANIFEST" --keys-dir "$BURST_KEYS_DIR" --report m01-rail-check.json
+    timeout_min: 10
+    produces: [m01-rail-check.json]
+    custody: none
+  # voidrunner-l1l2 — BUILD (RELEASE): assembleRelease via the staged
+  # signing wrapper; apksigner assertion (signer must equal the
+  # v1.0.12 signer 307f6839...48111); APK sha256; then the P-2 bundle
+  # census on the produced APK (fails the job on any mismatch).
+  - id: voidrunner-l1l2
+    lane: voidrunner
+    kind: BUILD
+    repo: raaruofficial/voidrunner
+    ref: 4b74227305c5c0044bb86c07515e8e4018576022
+    run: '[ -x /opt/burst/signing/run-release-build.sh ] && /opt/burst/signing/run-release-build.sh && APK=$(ls app/build/outputs/apk/release/*.apk | head -n 1) && APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n 1) && "$APKSIGNER" verify --print-certs "$APK" > signer-certs.txt 2>&1 && tr -d " :" < signer-certs.txt | grep -qi 307f683901323dbf38ae7f121b8c92f4c1b6c6c0a62745b8c25e1078b4148111 && sha256sum "$APK" > apk-sha256.txt && python3 tools/verify-bundle-census.py "$APK" > bundle-census.txt && cat bundle-census.txt && cat signer-certs.txt'
+    timeout_min: 40
+    produces: ["*.apk", signer-certs.txt, apk-sha256.txt, bundle-census.txt]
+    custody: none
+  # voidrunner-l3 — EMULATE: cold-run battery at the pin against the
+  # BUILD leg's RELEASE APK. Coverage: P1 cold (game title first
+  # screen), P2/P3 wallet walk (shell bar WALLET -> SIGN IN WITH .SKR,
+  # no-wallet error surface, cold + offline), PG gameplay phase (P-3:
+  # a full sector played to the draft; PARITY.md cross-check; P-4
+  # frames). A COMPLETED .skr sign-in still cannot be proven here —
+  # the stock emulator has no wallet app; that proof is the owner's
+  # Seeker sign-off (P-5), which is a blocking seal step.
+  - id: voidrunner-l3
+    lane: voidrunner
+    kind: EMULATE
+    repo: raaruofficial/voidrunner
+    ref: 4b74227305c5c0044bb86c07515e8e4018576022
+    run: APK="$BURST_OUT/jobs/voidrunner-l1l2/evidence/*.apk/app/build/outputs/apk/release/*.apk" APK_WAIT_S=2700 APK_WAIT_BUILD_ID=voidrunner-l1l2 ./cold-run-battery.sh
+    timeout_min: 150
+    produces: [cold-run-report.txt, logcat.txt, "*.png"]
+    custody: none
+  # voidrunner-verify — VERIFY (AMENDED for Route A, see header delta
+  # 3): source bundle census; bridge census (exactly one
+  # @JavascriptInterface, in GameBridge.kt); no wallet/signing surface
+  # in webgame/; android.webkit confined to webgame/; MWA clientlib
+  # pin and the WalletManager listing-truth URL check carried over
+  # from the release manifest unchanged.
+  - id: voidrunner-verify
+    lane: voidrunner
+    kind: VERIFY
+    repo: raaruofficial/voidrunner
+    ref: 4b74227305c5c0044bb86c07515e8e4018576022
+    run: 'python3 tools/verify-bundle-census.py --source . && test $(grep -rn "@JavascriptInterface" app/src/main/java/ | wc -l) -eq 1 && grep -q "@JavascriptInterface" app/src/main/java/com/voidrunner/app/webgame/GameBridge.kt && ! grep -rniE "signmessage|mobilewalletadapter|walletmanager" app/src/main/java/com/voidrunner/app/webgame/ && test $(grep -rl "android.webkit" app/src/main/java/ | grep -vc "app/webgame/") -eq 0 && grep -q "com.solanamobile:mobile-wallet-adapter-clientlib-ktx:2.0.8" app/build.gradle.kts && grep -Eq "voidrunner.raaru.app|raaruofficial.github.io/voidrunner" app/src/main/java/com/voidrunner/app/wallet/WalletManager.kt && echo VOIDRUNNER-VERIFY-OK > verify-report.txt'
+    timeout_min: 15
+    produces: [verify-report.txt]
+    custody: none
