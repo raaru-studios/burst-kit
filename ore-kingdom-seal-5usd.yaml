@@ -4,15 +4,20 @@
 # its own triple opt-in. Modeled line-for-line on the VOIDRUNNER
 # release campaign that flew 2026-11-19 (722 s, ~$0.08 actual).
 #
-# PIN: raaruofficial/ore-kingdom @ 8a3fddf3c3f3b826a05249dabb72864e33991324
+# PIN: raaruofficial/ore-kingdom @ 1a6207c3d3c169652b4e09f77489ea60580e4b6d
 #   The v0.1.4 adopted-set tree. App sources are byte-identical to the
 #   M4-graded commit ada5567 (graded run 41594961516, all PASS); the
 #   delta on top is build/CI only: the Gradle 8.11 wrapper (e477e16),
 #   the B-4 fail-closed release guard (4650882), and the two burst
 #   driver scripts under android/ci/ (8a3fddf). versionName 0.1.4 /
-#   versionCode 5, applicationId com.raaru.orekingdom. The old v0.1.3
-#   WebView shell at the repo root is NOT built by this campaign and
-#   must never be sealed (500-founder economics).
+#   versionCode 5, applicationId com.raaru.orekingdom.
+#   RE-PIN 2026-11-19 (F-1 cure, Jacob's 19:10 PST ruling "Delete the
+#   dead shell tree"): 1a6207c deletes the dead v0.1.3 WebView shell
+#   tree from main — the root app/ module (incl. forum/ActionsBridge.kt,
+#   the JS bridge F-1 flagged), the root Gradle project files, and
+#   tools/. android/ is byte-identical across the re-pin
+#   (git diff 8a3fddf..1a6207c -- android/ is empty). The shell must
+#   never be sealed (500-founder economics).
 #
 # ADOPTED ECONOMICS (verified by direct grep at the pin, staging
 # record ORE_KINGDOM_BURST_STAGING_2026-11-19): member cap 1,000;
@@ -104,18 +109,18 @@ box: { type: m7i.2xlarge, region: us-west-2, max_hours: 6 }
 jobs:
   - id: ok-gate-verify
     repo: raaruofficial/ore-kingdom
-    ref: 8a3fddf3c3f3b826a05249dabb72864e33991324
+    ref: 1a6207c3d3c169652b4e09f77489ea60580e4b6d
     kind: VERIFY
     lane: ore-kingdom-seal
     custody: none
     lane: ore-kingdom-seal
-    run: "{ echo 'ORE KINGDOM SEAL SOURCE GATE — pin 8a3fddf3c3f3b826a05249dabb72864e33991324'; grep -q 'versionName = \"0.1.4\"' android/app/build.gradle.kts && echo 'PASS versionName 0.1.4' || echo 'FAIL versionName'; grep -q 'versionCode = 5' android/app/build.gradle.kts && echo 'PASS versionCode 5' || echo 'FAIL versionCode'; grep -q 'GradleException' android/app/build.gradle.kts && echo 'PASS B-4 release fail-closed throw present' || echo 'FAIL B-4 throw'; grep -q 'orekingdom.137-184-143-128.sslip.io' android/app/build.gradle.kts && echo 'PASS HOST_URL default = production host' || echo 'FAIL HOST_URL default'; grep -q 'OK_MEMBER_CAP ?? 1000' host/staging-v014/server.ts && echo 'PASS member cap 1000' || echo 'FAIL member cap'; grep -q 'OK_JOIN_PRICE_SKR ?? 5000' host/staging-v014/server.ts && echo 'PASS join 5000 SKR once' || echo 'FAIL join price'; grep -q 'OK_POST_PRICE_USD_CENTS_THREAD ?? 350' host/staging-v014/server.ts && echo 'PASS thread fee $3.50' || echo 'FAIL thread fee'; grep -q 'POST_PRICE_REPLY_CENTS.*RETIRED' host/staging-v014/server.ts && echo 'PASS replies free (reply price RETIRED)' || echo 'FAIL replies'; grep -q 'OK_PAID_PIN_CAP ?? 2' host/staging-v014/server.ts && echo 'PASS paid pin cap 2' || echo 'FAIL pin cap'; grep -rq '$250 / 12h' android/app/src && echo 'PASS pin $250 / 12h (client)' || echo 'FAIL pin price'; grep -q 'OK_COMMERCIAL_PRICE_CENTS ?? 5000' host/staging-v014/server.ts && echo 'PASS commercial $50' || echo 'FAIL commercial'; grep -q 'OK_PRESTIGE_PRICE_SKR ?? 10000' host/staging-v014/server.ts && echo 'PASS prestige 10000 SKR' || echo 'FAIL prestige price'; grep -q 'OK_PRESTIGE_CAP ?? 100' host/staging-v014/server.ts && echo 'PASS prestige cap 100' || echo 'FAIL prestige cap'; grep -q 'OK_TIP_MIN_USD_CENTS ?? 500' host/staging-v014/server.ts && echo 'PASS tip min $5' || echo 'FAIL tip min'; grep -q 'OK_TIP_MAX_USD_CENTS ?? 50000' host/staging-v014/server.ts && echo 'PASS tip max $500' || echo 'FAIL tip max'; grep -q 'OK_TIP_FEE_USD_CENTS ?? 100' host/staging-v014/server.ts && echo 'PASS tip fee $1 flat' || echo 'FAIL tip fee'; ! grep -rq 'FOUNDER_PRICE\\|createFounderSession' android/app/src && echo 'PASS founder purchase apparatus absent from client' || echo 'FAIL founder apparatus present'; } > verify-report.txt; cat verify-report.txt; ! grep -q '^FAIL' verify-report.txt"
+    run: "{ echo 'ORE KINGDOM SEAL SOURCE GATE — pin 1a6207c3d3c169652b4e09f77489ea60580e4b6d'; grep -q 'versionName = \"0.1.4\"' android/app/build.gradle.kts && echo 'PASS versionName 0.1.4' || echo 'FAIL versionName'; grep -q 'versionCode = 5' android/app/build.gradle.kts && echo 'PASS versionCode 5' || echo 'FAIL versionCode'; grep -q 'GradleException' android/app/build.gradle.kts && echo 'PASS B-4 release fail-closed throw present' || echo 'FAIL B-4 throw'; grep -q 'orekingdom.137-184-143-128.sslip.io' android/app/build.gradle.kts && echo 'PASS HOST_URL default = production host' || echo 'FAIL HOST_URL default'; grep -q 'OK_MEMBER_CAP ?? 1000' host/staging-v014/server.ts && echo 'PASS member cap 1000' || echo 'FAIL member cap'; grep -q 'OK_JOIN_PRICE_SKR ?? 5000' host/staging-v014/server.ts && echo 'PASS join 5000 SKR once' || echo 'FAIL join price'; grep -q 'OK_POST_PRICE_USD_CENTS_THREAD ?? 350' host/staging-v014/server.ts && echo 'PASS thread fee $3.50' || echo 'FAIL thread fee'; grep -q 'POST_PRICE_REPLY_CENTS.*RETIRED' host/staging-v014/server.ts && echo 'PASS replies free (reply price RETIRED)' || echo 'FAIL replies'; grep -q 'OK_PAID_PIN_CAP ?? 2' host/staging-v014/server.ts && echo 'PASS paid pin cap 2' || echo 'FAIL pin cap'; grep -rq '$250 / 12h' android/app/src && echo 'PASS pin $250 / 12h (client)' || echo 'FAIL pin price'; grep -q 'OK_COMMERCIAL_PRICE_CENTS ?? 5000' host/staging-v014/server.ts && echo 'PASS commercial $50' || echo 'FAIL commercial'; grep -q 'OK_PRESTIGE_PRICE_SKR ?? 10000' host/staging-v014/server.ts && echo 'PASS prestige 10000 SKR' || echo 'FAIL prestige price'; grep -q 'OK_PRESTIGE_CAP ?? 100' host/staging-v014/server.ts && echo 'PASS prestige cap 100' || echo 'FAIL prestige cap'; grep -q 'OK_TIP_MIN_USD_CENTS ?? 500' host/staging-v014/server.ts && echo 'PASS tip min $5' || echo 'FAIL tip min'; grep -q 'OK_TIP_MAX_USD_CENTS ?? 50000' host/staging-v014/server.ts && echo 'PASS tip max $500' || echo 'FAIL tip max'; grep -q 'OK_TIP_FEE_USD_CENTS ?? 100' host/staging-v014/server.ts && echo 'PASS tip fee $1 flat' || echo 'FAIL tip fee'; ! grep -rq 'FOUNDER_PRICE\\|createFounderSession' android/app/src && echo 'PASS founder purchase apparatus absent from client' || echo 'FAIL founder apparatus present'; } > verify-report.txt; cat verify-report.txt; ! grep -q '^FAIL' verify-report.txt"
     produces: ["verify-report.txt"]
     timeout_min: 10
     priority: 0
   - id: ok-seal-build
     repo: raaruofficial/ore-kingdom
-    ref: 8a3fddf3c3f3b826a05249dabb72864e33991324
+    ref: 1a6207c3d3c169652b4e09f77489ea60580e4b6d
     kind: BUILD
     lane: ore-kingdom-seal
     custody: none
@@ -125,7 +130,7 @@ jobs:
     priority: 1
   - id: ok-cold-run
     repo: raaruofficial/ore-kingdom
-    ref: 8a3fddf3c3f3b826a05249dabb72864e33991324
+    ref: 1a6207c3d3c169652b4e09f77489ea60580e4b6d
     kind: EMULATE
     lane: ore-kingdom-seal
     custody: none
@@ -137,7 +142,7 @@ jobs:
     priority: 2
   - id: ok-rig
     repo: raaruofficial/ore-kingdom
-    ref: 8a3fddf3c3f3b826a05249dabb72864e33991324
+    ref: 1a6207c3d3c169652b4e09f77489ea60580e4b6d
     kind: EMULATE
     lane: ore-kingdom-seal
     custody: none
@@ -147,7 +152,7 @@ jobs:
     priority: 3
   - id: ok-rig-control
     repo: raaruofficial/ore-kingdom
-    ref: 8a3fddf3c3f3b826a05249dabb72864e33991324
+    ref: 1a6207c3d3c169652b4e09f77489ea60580e4b6d
     kind: EMULATE
     lane: ore-kingdom-seal
     custody: none
