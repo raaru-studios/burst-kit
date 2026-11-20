@@ -14,9 +14,12 @@
 #   (D-4 paste-fallback deletion + D-6 Locale.ROOT), f30774d4 (D-3
 #   Seraphim money-gate line + D-5 true empty-state copy). Source
 #   census at pin: exactly ONE ActivityResultSender construction, in
-#   MainActivity.onCreate. The rebuild fire re-runs the gate's
-#   re-verification protocol (dex census, battery wallet walk,
-#   mock-wallet abandonment cells, server session matrix). Fix record:
+#   MainActivity.onCreate. The rebuild fire runs the build plus the
+#   battery wallet walk on-box. The gate's dex census and server
+#   session matrix run post-harvest, locally, at no box cost.
+#   Mock-wallet abandonment cells CANNOT run in this fire (no
+#   mock-wallet job, APK, or driver exists in the kit) and remain
+#   owed after the fire. Fix record:
 #   goals/ion-storm-prototype/files/VOIDRUNNER_CLOSURE_FIXES_2026-11-19.md.
 #   Version at pin: versionCode 14 / versionName "1.1.0" in
 #   app/build.gradle.kts — CONFIRMED by Jacob 2026-11-19 and verified
